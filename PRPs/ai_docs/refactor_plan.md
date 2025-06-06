@@ -1,5 +1,17 @@
 # Refactor Plan
 
+We want to refactor this codebase to be more maintainable
+
+We use UV for package management and Ruff for linting.
+
+Read PRPs/ai_docs/uv_practices.md for more information on how to use UV. and how to set it up in pyproject.toml correctly with src/
+
+Read PRPs/ai_docs/uv_tools.md for more information on how to use UV tools.
+
+Research how to setup pytest with uv and add it to pyproject.toml
+
+uv add pytest
+
 ## Tree Structure
 
 ```
