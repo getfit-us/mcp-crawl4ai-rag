@@ -47,23 +47,23 @@ def crawling_service(mock_crawler, test_settings, mock_embedding_service):
 class TestUrlChecking:
     """Test URL type checking methods."""
     
-    def test_is_sitemap_true(self, crawling_service):
+    def test_is_sitemap_true(self, crawling_service) -> None:
         """Test sitemap URL detection."""
         assert crawling_service.is_sitemap("https://example.com/sitemap.xml") is True
         assert crawling_service.is_sitemap("https://example.com/path/sitemap.xml") is True
         assert crawling_service.is_sitemap("https://example.com/sitemap/index.xml") is True
     
-    def test_is_sitemap_false(self, crawling_service):
+    def test_is_sitemap_false(self, crawling_service) -> None:
         """Test non-sitemap URL detection."""
         assert crawling_service.is_sitemap("https://example.com/index.html") is False
         assert crawling_service.is_sitemap("https://example.com/robots.txt") is False
     
-    def test_is_txt_true(self, crawling_service):
+    def test_is_txt_true(self, crawling_service) -> None:
         """Test text file URL detection."""
         assert crawling_service.is_txt("https://example.com/file.txt") is True
         assert crawling_service.is_txt("https://example.com/path/readme.txt") is True
     
-    def test_is_txt_false(self, crawling_service):
+    def test_is_txt_false(self, crawling_service) -> None:
         """Test non-text file URL detection."""
         assert crawling_service.is_txt("https://example.com/index.html") is False
         assert crawling_service.is_txt("https://example.com/file.pdf") is False
@@ -73,7 +73,7 @@ class TestSitemapParsing:
     """Test sitemap parsing."""
     
     @patch('requests.get')
-    def test_parse_sitemap_success(self, mock_get, crawling_service):
+    def test_parse_sitemap_success(self, mock_get, crawling_service) -> None:
         """Test successful sitemap parsing."""
         # Mock response
         mock_response = Mock()
@@ -92,7 +92,7 @@ class TestSitemapParsing:
         assert "https://example.com/page2" in urls
     
     @patch('requests.get')
-    def test_parse_sitemap_failure(self, mock_get, crawling_service):
+    def test_parse_sitemap_failure(self, mock_get, crawling_service) -> None:
         """Test sitemap parsing with failed request."""
         mock_response = Mock()
         mock_response.status_code = 404
@@ -102,7 +102,7 @@ class TestSitemapParsing:
         assert urls == []
     
     @patch('requests.get')
-    def test_parse_sitemap_invalid_xml(self, mock_get, crawling_service):
+    def test_parse_sitemap_invalid_xml(self, mock_get, crawling_service) -> None:
         """Test sitemap parsing with invalid XML."""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -117,7 +117,7 @@ class TestCrawling:
     """Test crawling methods."""
     
     @pytest.mark.asyncio
-    async def test_crawl_markdown_file_success(self, crawling_service, mock_crawler):
+    async def test_crawl_markdown_file_success(self, crawling_service, mock_crawler) -> None:
         """Test successful markdown file crawling."""
         # Mock result
         mock_result = Mock()
@@ -135,7 +135,7 @@ class TestCrawling:
         mock_crawler.arun.assert_called_once()
     
     @pytest.mark.asyncio
-    async def test_crawl_markdown_file_failure(self, crawling_service, mock_crawler):
+    async def test_crawl_markdown_file_failure(self, crawling_service, mock_crawler) -> None:
         """Test failed markdown file crawling."""
         # Mock result
         mock_result = Mock()
@@ -148,7 +148,7 @@ class TestCrawling:
         assert results == []
     
     @pytest.mark.asyncio
-    async def test_crawl_batch(self, crawling_service, mock_crawler):
+    async def test_crawl_batch(self, crawling_service, mock_crawler) -> None:
         """Test batch crawling."""
         # Mock results
         mock_results = [
@@ -168,7 +168,7 @@ class TestCrawling:
         assert results[1]['markdown'] == "Content 2"
     
     @pytest.mark.asyncio
-    async def test_crawl_recursive_internal_links(self, crawling_service, mock_crawler):
+    async def test_crawl_recursive_internal_links(self, crawling_service, mock_crawler) -> None:
         """Test recursive internal link crawling."""
         # Mock first level results
         first_level = [
@@ -205,7 +205,7 @@ class TestCrawling:
 class TestCodeExtraction:
     """Test code extraction and processing."""
     
-    def test_extract_code_blocks_simple(self, crawling_service):
+    def test_extract_code_blocks_simple(self, crawling_service) -> None:
         """Test extracting simple code blocks."""
         markdown = """
 Some text before
@@ -236,7 +236,7 @@ Some text after
         assert 'Some text before' in code_blocks[0]['context_before']
         assert 'Some text after' in code_blocks[0]['context_after']
     
-    def test_extract_code_blocks_no_language(self, crawling_service):
+    def test_extract_code_blocks_no_language(self, crawling_service) -> None:
         """Test extracting code blocks without language specifier."""
         markdown = """Some text before
 
@@ -261,7 +261,7 @@ Some text after"""
         assert code_blocks[0]['language'] == ''
         assert 'This is a code block' in code_blocks[0]['code']
     
-    def test_extract_code_blocks_skip_short(self, crawling_service):
+    def test_extract_code_blocks_skip_short(self, crawling_service) -> None:
         """Test that short code blocks are skipped."""
         markdown = """Some introduction text
 
@@ -299,7 +299,7 @@ Some closing text"""
         assert 'short_code' not in code_blocks[0]['code']
     
     @pytest.mark.asyncio
-    async def test_generate_code_example_summary(self, crawling_service, mock_embedding_service):
+    async def test_generate_code_example_summary(self, crawling_service, mock_embedding_service) -> None:
         """Test code example summary generation."""
         # Mock OpenAI response
         mock_response = Mock()
@@ -315,7 +315,7 @@ Some closing text"""
         assert summary == "This code demonstrates a hello world function."
     
     @pytest.mark.asyncio
-    async def test_generate_code_example_summary_error(self, crawling_service, mock_embedding_service):
+    async def test_generate_code_example_summary_error(self, crawling_service, mock_embedding_service) -> None:
         """Test code example summary generation with error."""
         # Mock error
         mock_embedding_service.client.chat.completions.create.side_effect = Exception("API error")
@@ -333,7 +333,7 @@ class TestSourceSummary:
     """Test source summary extraction."""
     
     @pytest.mark.asyncio
-    async def test_extract_source_summary_success(self, crawling_service, mock_embedding_service):
+    async def test_extract_source_summary_success(self, crawling_service, mock_embedding_service) -> None:
         """Test successful source summary extraction."""
         # Mock OpenAI response
         mock_response = Mock()
@@ -348,7 +348,7 @@ class TestSourceSummary:
         assert summary == "This is a test library for unit testing."
     
     @pytest.mark.asyncio
-    async def test_extract_source_summary_empty_content(self, crawling_service):
+    async def test_extract_source_summary_empty_content(self, crawling_service) -> None:
         """Test source summary with empty content."""
         summary = await crawling_service.extract_source_summary(
             source_id="test-lib",
@@ -358,7 +358,7 @@ class TestSourceSummary:
         assert summary == "Content from test-lib"
     
     @pytest.mark.asyncio
-    async def test_extract_source_summary_long_result(self, crawling_service, mock_embedding_service):
+    async def test_extract_source_summary_long_result(self, crawling_service, mock_embedding_service) -> None:
         """Test source summary with long result that needs truncation."""
         # Mock OpenAI response with long text
         long_text = "A" * 600
@@ -376,7 +376,7 @@ class TestSourceSummary:
         assert summary.endswith("...")
     
     @pytest.mark.asyncio
-    async def test_extract_source_summary_error(self, crawling_service, mock_embedding_service):
+    async def test_extract_source_summary_error(self, crawling_service, mock_embedding_service) -> None:
         """Test source summary extraction with error."""
         # Mock error
         mock_embedding_service.client.chat.completions.create.side_effect = Exception("API error")

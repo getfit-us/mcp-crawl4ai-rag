@@ -1,7 +1,6 @@
 """Tool for crawling a single web page."""
 
 import json
-from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 from mcp.server.fastmcp import Context

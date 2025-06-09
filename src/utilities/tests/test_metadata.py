@@ -1,11 +1,10 @@
 """Tests for metadata utilities."""
 
-import pytest
 from datetime import datetime
 from crawl4ai_mcp.utilities.metadata import create_chunk_metadata
 
 
-def test_create_chunk_metadata():
+def test_create_chunk_metadata() -> None:
     """Test creating chunk metadata with all required fields."""
     section_info = {
         "title": "Test Section",
@@ -44,7 +43,7 @@ def test_create_chunk_metadata():
     datetime.fromisoformat(crawl_time.replace('Z', '+00:00'))
 
 
-def test_create_chunk_metadata_empty_section_info():
+def test_create_chunk_metadata_empty_section_info() -> None:
     """Test creating chunk metadata with empty section info."""
     metadata = create_chunk_metadata(
         chunk="Test content",
@@ -62,7 +61,7 @@ def test_create_chunk_metadata_empty_section_info():
     assert "crawl_time" in metadata
 
 
-def test_create_chunk_metadata_preserves_existing_fields():
+def test_create_chunk_metadata_preserves_existing_fields() -> None:
     """Test that existing fields in section_info are not overwritten."""
     section_info = {
         "source": "should_be_overwritten",  # This should be overwritten

@@ -33,7 +33,7 @@ def text_processor(test_settings, mock_embedding_service):
 class TestTextChunking:
     """Test text chunking functionality."""
     
-    def test_smart_chunk_markdown_simple(self, text_processor):
+    def test_smart_chunk_markdown_simple(self, text_processor) -> None:
         """Test basic text chunking."""
         text = "A" * 10000  # 10k characters
         chunks = text_processor.smart_chunk_markdown(text, chunk_size=5000)
@@ -42,7 +42,7 @@ class TestTextChunking:
         assert len(chunks[0]) == 5000
         assert len(chunks[1]) == 5000
     
-    def test_smart_chunk_markdown_respects_code_blocks(self, text_processor):
+    def test_smart_chunk_markdown_respects_code_blocks(self, text_processor) -> None:
         """Test chunking respects code block boundaries."""
         text = "Some text before\n\n" + "A" * 4000 + "\n\n```python\ncode block\n```\n\n" + "B" * 2000
         chunks = text_processor.smart_chunk_markdown(text, chunk_size=5000)
@@ -54,7 +54,7 @@ class TestTextChunking:
         assert "```python" in full_text
         assert "code block" in full_text
     
-    def test_smart_chunk_markdown_respects_paragraphs(self, text_processor):
+    def test_smart_chunk_markdown_respects_paragraphs(self, text_processor) -> None:
         """Test chunking respects paragraph boundaries."""
         para1 = "First paragraph. " * 200  # ~3200 chars
         para2 = "Second paragraph. " * 100  # ~1700 chars
@@ -71,7 +71,7 @@ class TestTextChunking:
         assert "Second paragraph" in full_text  
         assert "Third paragraph" in full_text
     
-    def test_smart_chunk_markdown_respects_sentences(self, text_processor):
+    def test_smart_chunk_markdown_respects_sentences(self, text_processor) -> None:
         """Test chunking respects sentence boundaries."""
         sentence = "This is a sentence. "
         text = sentence * 300  # ~6000 chars
@@ -83,12 +83,12 @@ class TestTextChunking:
         assert chunks[0].endswith(".")
         assert not chunks[0].endswith(". ")  # Trimmed
     
-    def test_smart_chunk_markdown_empty_text(self, text_processor):
+    def test_smart_chunk_markdown_empty_text(self, text_processor) -> None:
         """Test chunking with empty text."""
         chunks = text_processor.smart_chunk_markdown("", chunk_size=5000)
         assert chunks == []
     
-    def test_smart_chunk_markdown_small_text(self, text_processor):
+    def test_smart_chunk_markdown_small_text(self, text_processor) -> None:
         """Test chunking with text smaller than chunk size."""
         text = "Small text"
         chunks = text_processor.smart_chunk_markdown(text, chunk_size=5000)
@@ -100,7 +100,7 @@ class TestTextChunking:
 class TestSectionExtraction:
     """Test section information extraction."""
     
-    def test_extract_section_info_with_headers(self, text_processor):
+    def test_extract_section_info_with_headers(self, text_processor) -> None:
         """Test extracting headers from markdown."""
         chunk = """# Main Header
 
@@ -122,7 +122,7 @@ Even more content."""
         assert info["char_count"] == len(chunk)
         assert info["word_count"] == len(chunk.split())
     
-    def test_extract_section_info_no_headers(self, text_processor):
+    def test_extract_section_info_no_headers(self, text_processor) -> None:
         """Test extracting info from chunk without headers."""
         chunk = "Just some plain text without any headers."
         
@@ -132,7 +132,7 @@ Even more content."""
         assert info["char_count"] == len(chunk)
         assert info["word_count"] == len(chunk.split())
     
-    def test_extract_section_info_empty_chunk(self, text_processor):
+    def test_extract_section_info_empty_chunk(self, text_processor) -> None:
         """Test extracting info from empty chunk."""
         info = text_processor.extract_section_info("")
         
@@ -145,7 +145,7 @@ class TestContextualEmbedding:
     """Test contextual embedding generation."""
     
     @pytest.mark.asyncio
-    async def test_generate_contextual_embedding_success(self, text_processor, mock_embedding_service):
+    async def test_generate_contextual_embedding_success(self, text_processor, mock_embedding_service) -> None:
         """Test successful contextual embedding generation."""
         # Mock OpenAI response
         mock_response = Mock()
@@ -163,7 +163,7 @@ class TestContextualEmbedding:
         assert "---" in contextual_text
     
     @pytest.mark.asyncio
-    async def test_generate_contextual_embedding_error(self, text_processor, mock_embedding_service):
+    async def test_generate_contextual_embedding_error(self, text_processor, mock_embedding_service) -> None:
         """Test contextual embedding generation with error."""
         # Mock error
         mock_embedding_service.client.chat.completions.create.side_effect = Exception("API error")
@@ -175,7 +175,7 @@ class TestContextualEmbedding:
         assert contextual_text == chunk
     
     @pytest.mark.asyncio
-    async def test_process_chunk_with_context(self, text_processor, mock_embedding_service):
+    async def test_process_chunk_with_context(self, text_processor, mock_embedding_service) -> None:
         """Test chunk processing with context."""
         # Mock OpenAI response
         mock_response = Mock()
@@ -197,7 +197,7 @@ class TestCodeExampleProcessing:
     """Test code example processing."""
     
     @pytest.mark.asyncio
-    async def test_process_code_example(self, text_processor, mock_embedding_service):
+    async def test_process_code_example(self, text_processor, mock_embedding_service) -> None:
         """Test code example processing."""
         # Mock the crawling service's generate_code_example_summary
         with patch('crawl4ai_mcp.services.crawling.CrawlingService') as MockCrawlingService:

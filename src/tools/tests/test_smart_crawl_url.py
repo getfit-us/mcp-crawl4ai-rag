@@ -86,7 +86,7 @@ def mock_services():
 
 
 @pytest.mark.asyncio
-async def test_smart_crawl_recursive(mock_context, mock_services):
+async def test_smart_crawl_recursive(mock_context, mock_services) -> None:
     """Test recursive crawling for regular URL."""
     result = await smart_crawl_url(
         mock_context, 
@@ -109,7 +109,7 @@ async def test_smart_crawl_recursive(mock_context, mock_services):
 
 
 @pytest.mark.asyncio
-async def test_smart_crawl_txt_file(mock_context, mock_services):
+async def test_smart_crawl_txt_file(mock_context, mock_services) -> None:
     """Test crawling a txt file."""
     # Mock txt file detection
     mock_services['crawling'].is_txt.return_value = True
@@ -130,7 +130,7 @@ async def test_smart_crawl_txt_file(mock_context, mock_services):
 
 
 @pytest.mark.asyncio
-async def test_smart_crawl_sitemap(mock_context, mock_services):
+async def test_smart_crawl_sitemap(mock_context, mock_services) -> None:
     """Test crawling a sitemap."""
     # Mock sitemap detection
     mock_services['crawling'].is_txt.return_value = False
@@ -158,7 +158,7 @@ async def test_smart_crawl_sitemap(mock_context, mock_services):
 
 
 @pytest.mark.asyncio
-async def test_smart_crawl_custom_chunk_size(mock_context, mock_services):
+async def test_smart_crawl_custom_chunk_size(mock_context, mock_services) -> None:
     """Test using custom chunk size."""
     result = await smart_crawl_url(
         mock_context, 
@@ -177,7 +177,7 @@ async def test_smart_crawl_custom_chunk_size(mock_context, mock_services):
 
 
 @pytest.mark.asyncio
-async def test_smart_crawl_with_code_extraction(mock_context, mock_services):
+async def test_smart_crawl_with_code_extraction(mock_context, mock_services) -> None:
     """Test crawling with code extraction enabled."""
     # Enable code extraction
     mock_context.request_context.lifespan_context.settings.use_agentic_rag = True
@@ -205,7 +205,7 @@ async def test_smart_crawl_with_code_extraction(mock_context, mock_services):
 
 
 @pytest.mark.asyncio
-async def test_smart_crawl_no_results(mock_context, mock_services):
+async def test_smart_crawl_no_results(mock_context, mock_services) -> None:
     """Test handling when no content is crawled."""
     # Mock empty results
     mock_services['crawling'].crawl_recursive_internal_links.return_value = []
@@ -219,7 +219,7 @@ async def test_smart_crawl_no_results(mock_context, mock_services):
 
 
 @pytest.mark.asyncio
-async def test_smart_crawl_exception_handling(mock_context, mock_services):
+async def test_smart_crawl_exception_handling(mock_context, mock_services) -> None:
     """Test exception handling."""
     # Mock exception
     mock_services['crawling'].crawl_recursive_internal_links.side_effect = Exception("Network error")
@@ -233,7 +233,7 @@ async def test_smart_crawl_exception_handling(mock_context, mock_services):
 
 
 @pytest.mark.asyncio
-async def test_smart_crawl_partial_failure(mock_context, mock_services):
+async def test_smart_crawl_partial_failure(mock_context, mock_services) -> None:
     """Test handling partial failures during processing."""
     # Mock one successful and one failing result
     mock_services['crawling'].crawl_recursive_internal_links.return_value = [
@@ -263,7 +263,7 @@ async def test_smart_crawl_partial_failure(mock_context, mock_services):
 
 
 @pytest.mark.asyncio
-async def test_metadata_timestamp_format(mock_context, mock_services):
+async def test_metadata_timestamp_format(mock_context, mock_services) -> None:
     """Test that metadata contains properly formatted timestamp."""
     # Mock crawl result
     mock_services['crawling'].crawl_recursive_internal_links.return_value = [
@@ -305,7 +305,7 @@ async def test_metadata_timestamp_format(mock_context, mock_services):
 
 
 @pytest.mark.asyncio
-async def test_sitemap_with_empty_url_list(mock_context, mock_services):
+async def test_sitemap_with_empty_url_list(mock_context, mock_services) -> None:
     """Test handling of sitemap that returns no URLs."""
     # Mock sitemap detection
     mock_services['crawling'].is_txt.return_value = False
@@ -325,7 +325,7 @@ async def test_sitemap_with_empty_url_list(mock_context, mock_services):
 
 
 @pytest.mark.asyncio
-async def test_sitemap_crawl_batch_failure(mock_context, mock_services):
+async def test_sitemap_crawl_batch_failure(mock_context, mock_services) -> None:
     """Test handling when crawl_batch returns empty results for sitemap."""
     # Mock sitemap detection
     mock_services['crawling'].is_txt.return_value = False

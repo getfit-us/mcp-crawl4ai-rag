@@ -35,7 +35,7 @@ def mock_chat_response():
 
 
 @pytest.mark.asyncio
-async def test_create_embeddings_batch_success(embedding_service, mock_openai_response):
+async def test_create_embeddings_batch_success(embedding_service, mock_openai_response) -> None:
     """Test successful batch embedding creation."""
     with patch.object(embedding_service.client.embeddings, 'create', return_value=mock_openai_response):
         texts = ["text1", "text2", "text3"]
@@ -49,14 +49,14 @@ async def test_create_embeddings_batch_success(embedding_service, mock_openai_re
 
 
 @pytest.mark.asyncio
-async def test_create_embeddings_batch_empty_list(embedding_service):
+async def test_create_embeddings_batch_empty_list(embedding_service) -> None:
     """Test embedding creation with empty list."""
     embeddings = await embedding_service.create_embeddings_batch([])
     assert embeddings == []
 
 
 @pytest.mark.asyncio
-async def test_create_embeddings_batch_rate_limit_retry(embedding_service):
+async def test_create_embeddings_batch_rate_limit_retry(embedding_service) -> None:
     """Test retry logic on rate limit errors."""
     # Create custom mock response with 2 embeddings
     mock_response = Mock()
@@ -82,7 +82,7 @@ async def test_create_embeddings_batch_rate_limit_retry(embedding_service):
 
 
 @pytest.mark.asyncio
-async def test_create_embeddings_batch_fallback_to_individual(embedding_service):
+async def test_create_embeddings_batch_fallback_to_individual(embedding_service) -> None:
     """Test fallback to individual embeddings on batch failure."""
     # Mock individual responses
     individual_responses = [
@@ -113,7 +113,7 @@ async def test_create_embeddings_batch_fallback_to_individual(embedding_service)
 
 
 @pytest.mark.asyncio
-async def test_create_embeddings_batch_partial_failure(embedding_service):
+async def test_create_embeddings_batch_partial_failure(embedding_service) -> None:
     """Test handling of partial failures in individual embeddings."""
     # First 3 batch attempts fail, then individual calls with one failure
     with patch.object(
@@ -138,7 +138,7 @@ async def test_create_embeddings_batch_partial_failure(embedding_service):
 
 
 @pytest.mark.asyncio
-async def test_create_embedding_success(embedding_service):
+async def test_create_embedding_success(embedding_service) -> None:
     """Test single embedding creation."""
     mock_response = Mock()
     mock_response.data = [Mock(embedding=[0.5] * 1536)]
@@ -151,7 +151,7 @@ async def test_create_embedding_success(embedding_service):
 
 
 @pytest.mark.asyncio
-async def test_create_embedding_failure(embedding_service):
+async def test_create_embedding_failure(embedding_service) -> None:
     """Test single embedding creation failure."""
     with patch.object(embedding_service.client.embeddings, 'create', side_effect=Exception("API error")):
         embedding = await embedding_service.create_embedding("test text")
@@ -161,7 +161,7 @@ async def test_create_embedding_failure(embedding_service):
 
 
 @pytest.mark.asyncio
-async def test_generate_contextual_embedding_success(embedding_service, mock_chat_response):
+async def test_generate_contextual_embedding_success(embedding_service, mock_chat_response) -> None:
     """Test successful contextual embedding generation."""
     with patch.object(embedding_service.client.chat.completions, 'create', return_value=mock_chat_response):
         full_doc = "This is a document about Python programming..."
@@ -178,7 +178,7 @@ async def test_generate_contextual_embedding_success(embedding_service, mock_cha
 
 
 @pytest.mark.asyncio
-async def test_generate_contextual_embedding_failure(embedding_service):
+async def test_generate_contextual_embedding_failure(embedding_service) -> None:
     """Test contextual embedding generation failure."""
     with patch.object(
         embedding_service.client.chat.completions,
@@ -197,7 +197,7 @@ async def test_generate_contextual_embedding_failure(embedding_service):
 
 
 @pytest.mark.asyncio
-async def test_process_chunks_with_context_success(embedding_service, mock_chat_response):
+async def test_process_chunks_with_context_success(embedding_service, mock_chat_response) -> None:
     """Test processing multiple chunks with context."""
     with patch.object(embedding_service.client.chat.completions, 'create', return_value=mock_chat_response):
         chunks = [
@@ -215,7 +215,7 @@ async def test_process_chunks_with_context_success(embedding_service, mock_chat_
 
 
 @pytest.mark.asyncio
-async def test_process_chunks_with_context_mixed_results(embedding_service, mock_chat_response):
+async def test_process_chunks_with_context_mixed_results(embedding_service, mock_chat_response) -> None:
     """Test processing chunks with mixed success/failure."""
     # First and third succeed, second fails
     with patch.object(
@@ -242,7 +242,7 @@ async def test_process_chunks_with_context_mixed_results(embedding_service, mock
         assert results[2][1] is True
 
 
-def test_process_chunk_with_context_sync(embedding_service, mock_chat_response):
+def test_process_chunk_with_context_sync(embedding_service, mock_chat_response) -> None:
     """Test synchronous wrapper for chunk processing."""
     with patch.object(embedding_service.client.chat.completions, 'create', return_value=mock_chat_response):
         args = ("url", "chunk content", "full document")
@@ -253,7 +253,7 @@ def test_process_chunk_with_context_sync(embedding_service, mock_chat_response):
 
 
 @pytest.mark.asyncio
-async def test_long_document_truncation(embedding_service, mock_chat_response):
+async def test_long_document_truncation(embedding_service, mock_chat_response) -> None:
     """Test that long documents are truncated properly."""
     with patch.object(embedding_service.client.chat.completions, 'create', return_value=mock_chat_response) as mock_create:
         # Create a very long document

@@ -73,7 +73,7 @@ def mock_code_results():
 
 
 @pytest.mark.asyncio
-async def test_search_documents_success(search_service, mock_supabase_client, mock_search_results, mock_embedding_service):
+async def test_search_documents_success(search_service, mock_supabase_client, mock_search_results, mock_embedding_service) -> None:
     """Test successful document search."""
     # Mock RPC response
     mock_execute = Mock()
@@ -102,7 +102,7 @@ async def test_search_documents_success(search_service, mock_supabase_client, mo
 
 
 @pytest.mark.asyncio
-async def test_search_documents_with_filters(search_service, mock_supabase_client, mock_search_results):
+async def test_search_documents_with_filters(search_service, mock_supabase_client, mock_search_results) -> None:
     """Test document search with metadata filters."""
     mock_execute = Mock()
     mock_execute.data = mock_search_results
@@ -127,7 +127,7 @@ async def test_search_documents_with_filters(search_service, mock_supabase_clien
 
 
 @pytest.mark.asyncio
-async def test_search_documents_error_handling(search_service, mock_supabase_client):
+async def test_search_documents_error_handling(search_service, mock_supabase_client) -> None:
     """Test error handling in document search."""
     # Mock RPC to raise an exception
     mock_supabase_client.rpc.return_value.execute.side_effect = Exception("Database error")
@@ -138,7 +138,7 @@ async def test_search_documents_error_handling(search_service, mock_supabase_cli
 
 
 @pytest.mark.asyncio
-async def test_search_documents_embedding_error(search_service, mock_embedding_service):
+async def test_search_documents_embedding_error(search_service, mock_embedding_service) -> None:
     """Test error handling when embedding creation fails."""
     # Mock embedding service to raise an exception
     mock_embedding_service.create_embedding.side_effect = Exception("Embedding API error")
@@ -153,7 +153,7 @@ async def test_search_documents_embedding_error(search_service, mock_embedding_s
 
 
 @pytest.mark.asyncio
-async def test_search_code_examples_success(search_service, mock_supabase_client, mock_code_results):
+async def test_search_code_examples_success(search_service, mock_supabase_client, mock_code_results) -> None:
     """Test successful code example search."""
     mock_execute = Mock()
     mock_execute.data = mock_code_results
@@ -173,7 +173,7 @@ async def test_search_code_examples_success(search_service, mock_supabase_client
 
 
 @pytest.mark.asyncio
-async def test_search_code_examples_with_source_filter(search_service, mock_supabase_client, mock_code_results):
+async def test_search_code_examples_with_source_filter(search_service, mock_supabase_client, mock_code_results) -> None:
     """Test code example search with source filter."""
     mock_execute = Mock()
     mock_execute.data = mock_code_results
@@ -191,7 +191,7 @@ async def test_search_code_examples_with_source_filter(search_service, mock_supa
 
 
 @pytest.mark.asyncio
-async def test_perform_search_documents_only(search_service, mock_supabase_client, mock_search_results):
+async def test_perform_search_documents_only(search_service, mock_supabase_client, mock_search_results) -> None:
     """Test perform_search with documents only."""
     mock_execute = Mock()
     mock_execute.data = mock_search_results
@@ -213,7 +213,7 @@ async def test_perform_search_documents_only(search_service, mock_supabase_clien
 
 
 @pytest.mark.asyncio
-async def test_perform_search_with_code_examples(search_service, mock_supabase_client, mock_search_results, mock_code_results, test_settings):
+async def test_perform_search_with_code_examples(search_service, mock_supabase_client, mock_search_results, mock_code_results, test_settings) -> None:
     """Test perform_search including code examples."""
     # Enable code examples
     test_settings.use_agentic_rag = True
@@ -245,7 +245,7 @@ async def test_perform_search_with_code_examples(search_service, mock_supabase_c
 
 
 @pytest.mark.asyncio
-async def test_perform_search_error_handling(search_service, mock_supabase_client):
+async def test_perform_search_error_handling(search_service, mock_supabase_client) -> None:
     """Test perform_search error handling."""
     mock_supabase_client.rpc.return_value.execute.side_effect = Exception("Search failed")
     
@@ -260,7 +260,7 @@ async def test_perform_search_error_handling(search_service, mock_supabase_clien
 
 
 @pytest.mark.asyncio
-async def test_rerank_results(search_service):
+async def test_rerank_results(search_service) -> None:
     """Test result reranking."""
     # Create mock reranking model
     mock_reranker = Mock()
@@ -313,7 +313,7 @@ async def test_rerank_results(search_service):
 
 
 @pytest.mark.asyncio
-async def test_rerank_results_empty_input(search_service):
+async def test_rerank_results_empty_input(search_service) -> None:
     """Test reranking with empty results."""
     mock_reranker = Mock()
     
@@ -335,7 +335,7 @@ async def test_rerank_results_empty_input(search_service):
 
 
 @pytest.mark.asyncio
-async def test_rerank_results_error_handling(search_service):
+async def test_rerank_results_error_handling(search_service) -> None:
     """Test reranking error handling."""
     mock_reranker = Mock()
     mock_reranker.predict.side_effect = Exception("Reranking failed")

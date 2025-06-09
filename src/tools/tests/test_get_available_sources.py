@@ -60,7 +60,7 @@ def mock_database_service():
 
 
 @pytest.mark.asyncio
-async def test_get_available_sources_success(mock_context, mock_database_service):
+async def test_get_available_sources_success(mock_context, mock_database_service) -> None:
     """Test successful retrieval of available sources."""
     result = await get_available_sources(mock_context)
     result_data = json.loads(result)
@@ -94,7 +94,7 @@ async def test_get_available_sources_success(mock_context, mock_database_service
 
 
 @pytest.mark.asyncio
-async def test_get_available_sources_empty(mock_context, mock_database_service):
+async def test_get_available_sources_empty(mock_context, mock_database_service) -> None:
     """Test when no sources are available."""
     # Mock empty sources
     mock_database_service.get_available_sources.return_value = []
@@ -109,7 +109,7 @@ async def test_get_available_sources_empty(mock_context, mock_database_service):
 
 
 @pytest.mark.asyncio
-async def test_get_available_sources_exception(mock_context, mock_database_service):
+async def test_get_available_sources_exception(mock_context, mock_database_service) -> None:
     """Test exception handling."""
     # Mock exception
     mock_database_service.get_available_sources.side_effect = Exception("Database error")
@@ -124,7 +124,7 @@ async def test_get_available_sources_exception(mock_context, mock_database_servi
 
 
 @pytest.mark.asyncio
-async def test_get_available_sources_partial_data(mock_context, mock_database_service):
+async def test_get_available_sources_partial_data(mock_context, mock_database_service) -> None:
     """Test handling sources with missing optional fields."""
     # Mock source with minimal data
     sources = [

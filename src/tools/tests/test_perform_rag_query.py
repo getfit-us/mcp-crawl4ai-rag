@@ -78,7 +78,7 @@ def mock_search_service():
 
 
 @pytest.mark.asyncio
-async def test_perform_rag_query_success(mock_context, mock_search_service):
+async def test_perform_rag_query_success(mock_context, mock_search_service) -> None:
     """Test successful RAG query."""
     result = await perform_rag_query(
         mock_context,
@@ -108,7 +108,7 @@ async def test_perform_rag_query_success(mock_context, mock_search_service):
 
 
 @pytest.mark.asyncio
-async def test_perform_rag_query_hybrid_search(mock_context, mock_search_service):
+async def test_perform_rag_query_hybrid_search(mock_context, mock_search_service) -> None:
     """Test RAG query with hybrid search enabled."""
     # Enable hybrid search
     mock_context.request_context.lifespan_context.settings.use_hybrid_search = True
@@ -128,7 +128,7 @@ async def test_perform_rag_query_hybrid_search(mock_context, mock_search_service
 
 
 @pytest.mark.asyncio
-async def test_perform_rag_query_with_reranking(mock_context, mock_search_service):
+async def test_perform_rag_query_with_reranking(mock_context, mock_search_service) -> None:
     """Test RAG query with reranking enabled."""
     # Enable reranking
     mock_context.request_context.lifespan_context.settings.use_reranking = True
@@ -184,7 +184,7 @@ async def test_perform_rag_query_with_reranking(mock_context, mock_search_servic
 
 
 @pytest.mark.asyncio
-async def test_perform_rag_query_no_results(mock_context, mock_search_service):
+async def test_perform_rag_query_no_results(mock_context, mock_search_service) -> None:
     """Test RAG query with no results."""
     # Mock empty results
     mock_search_service.perform_search.return_value = SearchResponse(
@@ -204,7 +204,7 @@ async def test_perform_rag_query_no_results(mock_context, mock_search_service):
 
 
 @pytest.mark.asyncio
-async def test_perform_rag_query_search_failure(mock_context, mock_search_service):
+async def test_perform_rag_query_search_failure(mock_context, mock_search_service) -> None:
     """Test handling search failure."""
     # Mock search failure
     mock_search_service.perform_search.return_value = SearchResponse(
@@ -224,7 +224,7 @@ async def test_perform_rag_query_search_failure(mock_context, mock_search_servic
 
 
 @pytest.mark.asyncio
-async def test_perform_rag_query_exception(mock_context, mock_search_service):
+async def test_perform_rag_query_exception(mock_context, mock_search_service) -> None:
     """Test exception handling."""
     # Mock exception
     mock_search_service.perform_search.side_effect = Exception("Database connection failed")
@@ -239,7 +239,7 @@ async def test_perform_rag_query_exception(mock_context, mock_search_service):
 
 
 @pytest.mark.asyncio
-async def test_perform_rag_query_limit_results(mock_context, mock_search_service):
+async def test_perform_rag_query_limit_results(mock_context, mock_search_service) -> None:
     """Test limiting results to match_count."""
     # Request only 2 results
     result = await perform_rag_query(

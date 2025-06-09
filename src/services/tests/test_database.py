@@ -14,7 +14,7 @@ def database_service(mock_supabase_client, test_settings):
 
 
 @pytest.mark.asyncio
-async def test_add_documents_success(database_service, mock_supabase_client):
+async def test_add_documents_success(database_service, mock_supabase_client) -> None:
     """Test successful document addition."""
     # Mock the delete operation
     mock_supabase_client.table.return_value.delete.return_value.in_.return_value.execute.return_value = Mock()
@@ -37,7 +37,7 @@ async def test_add_documents_success(database_service, mock_supabase_client):
 
 
 @pytest.mark.asyncio
-async def test_add_documents_empty_list(database_service):
+async def test_add_documents_empty_list(database_service) -> None:
     """Test handling of empty document list."""
     result = await database_service.add_documents(
         urls=[],
@@ -54,7 +54,7 @@ async def test_add_documents_empty_list(database_service):
 
 
 @pytest.mark.asyncio
-async def test_add_documents_delete_error(database_service, mock_supabase_client):
+async def test_add_documents_delete_error(database_service, mock_supabase_client) -> None:
     """Test handling of delete errors."""
     # Mock delete to raise an exception
     mock_supabase_client.table.return_value.delete.return_value.in_.return_value.execute.side_effect = Exception("Delete failed")
@@ -74,7 +74,7 @@ async def test_add_documents_delete_error(database_service, mock_supabase_client
 
 
 @pytest.mark.asyncio
-async def test_add_code_examples_success(database_service, mock_supabase_client):
+async def test_add_code_examples_success(database_service, mock_supabase_client) -> None:
     """Test successful code example addition."""
     # Mock the delete operation
     mock_supabase_client.table.return_value.delete.return_value.eq.return_value.execute.return_value = Mock()
@@ -97,7 +97,7 @@ async def test_add_code_examples_success(database_service, mock_supabase_client)
 
 
 @pytest.mark.asyncio
-async def test_add_code_examples_empty_list(database_service):
+async def test_add_code_examples_empty_list(database_service) -> None:
     """Test handling of empty code examples list."""
     result = await database_service.add_code_examples(
         urls=[],
@@ -113,7 +113,7 @@ async def test_add_code_examples_empty_list(database_service):
 
 
 @pytest.mark.asyncio
-async def test_update_source_info_new_source(database_service, mock_supabase_client):
+async def test_update_source_info_new_source(database_service, mock_supabase_client) -> None:
     """Test creating a new source."""
     # Mock update to return no data (source doesn't exist)
     mock_supabase_client.table.return_value.update.return_value.eq.return_value.execute.return_value = Mock(data=[])
@@ -135,7 +135,7 @@ async def test_update_source_info_new_source(database_service, mock_supabase_cli
 
 
 @pytest.mark.asyncio
-async def test_update_source_info_existing_source(database_service, mock_supabase_client):
+async def test_update_source_info_existing_source(database_service, mock_supabase_client) -> None:
     """Test updating an existing source."""
     # Mock update to return data (source exists)
     mock_supabase_client.table.return_value.update.return_value.eq.return_value.execute.return_value = Mock(data=[{"source_id": "example.com"}])
@@ -154,7 +154,7 @@ async def test_update_source_info_existing_source(database_service, mock_supabas
 
 
 @pytest.mark.asyncio
-async def test_update_source_info_error(database_service, mock_supabase_client):
+async def test_update_source_info_error(database_service, mock_supabase_client) -> None:
     """Test handling of source update errors."""
     # Mock update to raise an exception
     mock_supabase_client.table.return_value.update.return_value.eq.return_value.execute.side_effect = Exception("Update failed")
@@ -170,7 +170,7 @@ async def test_update_source_info_error(database_service, mock_supabase_client):
 
 
 @pytest.mark.asyncio
-async def test_get_available_sources(database_service, mock_supabase_client):
+async def test_get_available_sources(database_service, mock_supabase_client) -> None:
     """Test getting available sources."""
     # Mock sources table response
     mock_sources_data = [
@@ -236,7 +236,7 @@ async def test_get_available_sources(database_service, mock_supabase_client):
 
 
 @pytest.mark.asyncio
-async def test_get_available_sources_error(database_service, mock_supabase_client):
+async def test_get_available_sources_error(database_service, mock_supabase_client) -> None:
     """Test handling of errors when getting sources."""
     # Mock to raise an exception
     mock_supabase_client.table.return_value.select.return_value.execute.side_effect = Exception("Query failed")
@@ -247,7 +247,7 @@ async def test_get_available_sources_error(database_service, mock_supabase_clien
 
 
 @pytest.mark.asyncio
-async def test_get_available_sources_column_names(database_service, mock_supabase_client):
+async def test_get_available_sources_column_names(database_service, mock_supabase_client) -> None:
     """Test that get_available_sources uses correct column names (source_id not source)."""
     # Mock sources data
     mock_sources_data = [
@@ -336,7 +336,7 @@ async def test_get_available_sources_column_names(database_service, mock_supabas
 
 
 @pytest.mark.asyncio
-async def test_generate_contextual_content(database_service):
+async def test_generate_contextual_content(database_service) -> None:
     """Test contextual content generation."""
     content = database_service._generate_contextual_content(
         chunk_content="This is chunk content",

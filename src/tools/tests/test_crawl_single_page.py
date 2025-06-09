@@ -83,7 +83,7 @@ def mock_services():
 
 
 @pytest.mark.asyncio
-async def test_crawl_single_page_success(mock_context, mock_services):
+async def test_crawl_single_page_success(mock_context, mock_services) -> None:
     """Test successful single page crawl."""
     result = await crawl_single_page(mock_context, "https://example.com")
     result_data = json.loads(result)
@@ -105,7 +105,7 @@ async def test_crawl_single_page_success(mock_context, mock_services):
 
 
 @pytest.mark.asyncio
-async def test_crawl_single_page_with_code_examples(mock_context, mock_services):
+async def test_crawl_single_page_with_code_examples(mock_context, mock_services) -> None:
     """Test crawling with code example extraction."""
     # Enable code extraction
     mock_context.request_context.lifespan_context.settings.use_agentic_rag = True
@@ -139,7 +139,7 @@ async def test_crawl_single_page_with_code_examples(mock_context, mock_services)
 
 
 @pytest.mark.asyncio
-async def test_crawl_single_page_with_contextual_embeddings(mock_context, mock_services):
+async def test_crawl_single_page_with_contextual_embeddings(mock_context, mock_services) -> None:
     """Test crawling with contextual embeddings."""
     # Enable contextual embeddings
     mock_context.request_context.lifespan_context.settings.use_contextual_embeddings = True
@@ -154,7 +154,7 @@ async def test_crawl_single_page_with_contextual_embeddings(mock_context, mock_s
 
 
 @pytest.mark.asyncio
-async def test_crawl_single_page_crawl_failure(mock_context, mock_services):
+async def test_crawl_single_page_crawl_failure(mock_context, mock_services) -> None:
     """Test handling of crawl failure."""
     # Mock empty results
     mock_services['crawling'].crawl_batch.return_value = []
@@ -167,7 +167,7 @@ async def test_crawl_single_page_crawl_failure(mock_context, mock_services):
 
 
 @pytest.mark.asyncio
-async def test_crawl_single_page_exception_handling(mock_context, mock_services):
+async def test_crawl_single_page_exception_handling(mock_context, mock_services) -> None:
     """Test exception handling."""
     # Mock exception
     mock_services['crawling'].crawl_batch.side_effect = Exception("Network error")
@@ -181,7 +181,7 @@ async def test_crawl_single_page_exception_handling(mock_context, mock_services)
 
 
 @pytest.mark.asyncio
-async def test_metadata_timestamp_format(mock_context, mock_services):
+async def test_metadata_timestamp_format(mock_context, mock_services) -> None:
     """Test that metadata contains properly formatted timestamp."""
     # Mock successful crawl
     mock_services['crawling'].crawl_batch.return_value = [

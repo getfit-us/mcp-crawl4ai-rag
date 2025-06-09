@@ -45,7 +45,7 @@ def sample_results():
 class TestReranker:
     """Test reranking functionality."""
     
-    def test_rerank_results_success(self, reranker, mock_cross_encoder, sample_results):
+    def test_rerank_results_success(self, reranker, mock_cross_encoder, sample_results) -> None:
         """Test successful reranking of results."""
         # Mock reranking scores (reverse order to test sorting)
         mock_cross_encoder.predict.return_value = [0.5, 0.9, 0.7]
@@ -72,12 +72,12 @@ class TestReranker:
         assert reranked[1]["rerank_score"] == 0.7
         assert reranked[2]["rerank_score"] == 0.5
     
-    def test_rerank_results_empty_results(self, reranker):
+    def test_rerank_results_empty_results(self, reranker) -> None:
         """Test reranking with empty results."""
         results = reranker.rerank_results("query", [])
         assert results == []
     
-    def test_rerank_results_no_model(self, test_settings):
+    def test_rerank_results_no_model(self, test_settings) -> None:
         """Test reranking without a model."""
         reranker_no_model = Reranker(model=None, settings=test_settings)
         sample = [{"content": "test"}]
@@ -85,7 +85,7 @@ class TestReranker:
         results = reranker_no_model.rerank_results("query", sample)
         assert results == sample  # Should return original results
     
-    def test_rerank_results_custom_content_key(self, reranker, mock_cross_encoder, sample_results):
+    def test_rerank_results_custom_content_key(self, reranker, mock_cross_encoder, sample_results) -> None:
         """Test reranking with custom content key."""
         # Change content key
         for result in sample_results:
@@ -103,7 +103,7 @@ class TestReranker:
         ]
         mock_cross_encoder.predict.assert_called_once_with(expected_pairs)
     
-    def test_rerank_results_error_handling(self, reranker, mock_cross_encoder, sample_results):
+    def test_rerank_results_error_handling(self, reranker, mock_cross_encoder, sample_results) -> None:
         """Test reranking with prediction error."""
         # Mock error
         mock_cross_encoder.predict.side_effect = Exception("Model error")
@@ -113,7 +113,7 @@ class TestReranker:
         # Should return original results on error
         assert results == sample_results
     
-    def test_filter_by_threshold(self, reranker):
+    def test_filter_by_threshold(self, reranker) -> None:
         """Test filtering results by threshold."""
         results = [
             {"content": "Result 1", "rerank_score": 0.9},
@@ -128,7 +128,7 @@ class TestReranker:
         assert filtered[0]["rerank_score"] == 0.9
         assert filtered[1]["rerank_score"] == 0.7
     
-    def test_filter_by_threshold_custom_key(self, reranker):
+    def test_filter_by_threshold_custom_key(self, reranker) -> None:
         """Test filtering with custom score key."""
         results = [
             {"content": "Result 1", "custom_score": 0.9},
@@ -146,7 +146,7 @@ class TestReranker:
         assert filtered[0]["custom_score"] == 0.9
         assert filtered[1]["custom_score"] == 0.7
     
-    def test_filter_by_threshold_missing_scores(self, reranker):
+    def test_filter_by_threshold_missing_scores(self, reranker) -> None:
         """Test filtering when some results lack scores."""
         results = [
             {"content": "Result 1", "rerank_score": 0.9},
@@ -165,7 +165,7 @@ class TestRerankerInitialization:
     """Test Reranker initialization."""
     
     @patch('crawl4ai_mcp.utilities.reranking.CrossEncoder')
-    def test_init_with_reranking_enabled(self, MockCrossEncoder, test_settings):
+    def test_init_with_reranking_enabled(self, MockCrossEncoder, test_settings) -> None:
         """Test initialization with reranking enabled."""
         test_settings.use_reranking = True
         test_settings.cross_encoder_model = "test-model"
@@ -179,7 +179,7 @@ class TestRerankerInitialization:
         MockCrossEncoder.assert_called_once_with("test-model")
         assert reranker.model == mock_model
     
-    def test_init_with_reranking_disabled(self, test_settings):
+    def test_init_with_reranking_disabled(self, test_settings) -> None:
         """Test initialization with reranking disabled."""
         test_settings.use_reranking = False
         
@@ -188,7 +188,7 @@ class TestRerankerInitialization:
         # Should not initialize model
         assert reranker.model is None
     
-    def test_init_with_provided_model(self, test_settings, mock_cross_encoder):
+    def test_init_with_provided_model(self, test_settings, mock_cross_encoder) -> None:
         """Test initialization with provided model."""
         reranker = Reranker(model=mock_cross_encoder, settings=test_settings)
         

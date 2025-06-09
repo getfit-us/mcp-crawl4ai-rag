@@ -2,7 +2,6 @@
 
 import json
 import logging
-from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 from mcp.server.fastmcp import Context

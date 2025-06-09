@@ -75,7 +75,7 @@ def mock_search_service():
 
 
 @pytest.mark.asyncio
-async def test_search_code_examples_success(mock_context, mock_search_service):
+async def test_search_code_examples_success(mock_context, mock_search_service) -> None:
     """Test successful code example search."""
     result = await search_code_examples(
         mock_context,
@@ -109,7 +109,7 @@ async def test_search_code_examples_success(mock_context, mock_search_service):
 
 
 @pytest.mark.asyncio
-async def test_search_code_examples_disabled(mock_context):
+async def test_search_code_examples_disabled(mock_context) -> None:
     """Test when code extraction is disabled."""
     # Disable code extraction
     mock_context.request_context.lifespan_context.settings.use_agentic_rag = False
@@ -123,7 +123,7 @@ async def test_search_code_examples_disabled(mock_context):
 
 
 @pytest.mark.asyncio
-async def test_search_code_examples_with_reranking(mock_context, mock_search_service):
+async def test_search_code_examples_with_reranking(mock_context, mock_search_service) -> None:
     """Test code search with reranking enabled."""
     # Enable reranking
     mock_context.request_context.lifespan_context.settings.use_reranking = True
@@ -184,7 +184,7 @@ async def test_search_code_examples_with_reranking(mock_context, mock_search_ser
 
 
 @pytest.mark.asyncio
-async def test_search_code_examples_no_results(mock_context, mock_search_service):
+async def test_search_code_examples_no_results(mock_context, mock_search_service) -> None:
     """Test when no code examples are found."""
     # Mock empty results
     mock_search_service.search_code_examples.return_value = []
@@ -199,7 +199,7 @@ async def test_search_code_examples_no_results(mock_context, mock_search_service
 
 
 @pytest.mark.asyncio
-async def test_search_code_examples_limit_results(mock_context, mock_search_service):
+async def test_search_code_examples_limit_results(mock_context, mock_search_service) -> None:
     """Test limiting results to match_count."""
     # Request only 2 results
     result = await search_code_examples(
@@ -215,7 +215,7 @@ async def test_search_code_examples_limit_results(mock_context, mock_search_serv
 
 
 @pytest.mark.asyncio
-async def test_search_code_examples_exception(mock_context, mock_search_service):
+async def test_search_code_examples_exception(mock_context, mock_search_service) -> None:
     """Test exception handling."""
     # Mock exception
     mock_search_service.search_code_examples.side_effect = Exception("Search index error")
@@ -230,7 +230,7 @@ async def test_search_code_examples_exception(mock_context, mock_search_service)
 
 
 @pytest.mark.asyncio
-async def test_search_code_examples_without_source_filter(mock_context, mock_search_service):
+async def test_search_code_examples_without_source_filter(mock_context, mock_search_service) -> None:
     """Test searching without source filter."""
     result = await search_code_examples(
         mock_context,
