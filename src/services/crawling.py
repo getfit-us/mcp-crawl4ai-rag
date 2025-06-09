@@ -1,7 +1,6 @@
 """Crawling service for web content extraction and processing."""
 
-import asyncio
-import re
+import logging
 import requests
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse, urldefrag
@@ -11,6 +10,8 @@ from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode, MemoryAdaptiv
 
 from src.config import get_settings
 from src.services.embeddings import EmbeddingService
+
+logger = logging.getLogger(__name__)
 
 
 class CrawlingService:
@@ -71,7 +72,7 @@ class CrawlingService:
                 tree = ElementTree.fromstring(resp.content)
                 urls = [loc.text for loc in tree.findall('.//{*}loc')]
             except Exception as e:
-                print(f"Error parsing sitemap XML: {e}")
+                logger.error(f"Error parsing sitemap XML: {e}")
 
         return urls
     
@@ -91,7 +92,7 @@ class CrawlingService:
         if result.success and result.markdown:
             return [{'url': url, 'markdown': result.markdown}]
         else:
-            print(f"Failed to crawl {url}: {result.error_message}")
+            logger.warning(f"Failed to crawl {url}: {result.error_message}")
             return []
     
     async def crawl_batch(self, urls: List[str], max_concurrent: int = 10) -> List[Dict[str, Any]]:
@@ -189,7 +190,7 @@ class CrawlingService:
         if content.startswith('```'):
             # Skip the first triple backticks
             start_offset = 3
-            print("Skipping initial triple backticks")
+            logger.debug("Skipping initial triple backticks")
         
         # Find all occurrences of triple backticks
         backtick_positions = []
@@ -215,7 +216,7 @@ class CrawlingService:
             if len(lines) > 1:
                 # Check if first line is a language specifier (no spaces, common language names)
                 first_line = lines[0].strip()
-                if first_line and not ' ' in first_line and len(first_line) < 20:
+                if first_line and ' ' not in first_line and len(first_line) < 20:
                     language = first_line
                     code_content = lines[1].strip() if len(lines) > 1 else ""
                 else:
@@ -301,7 +302,7 @@ Based on the code example and its surrounding context, provide a concise summary
             return response.choices[0].message.content.strip()
         
         except Exception as e:
-            print(f"Error generating code example summary: {e}")
+            logger.error(f"Error generating code example summary: {e}")
             return "Code example for demonstration purposes."
     
     async def extract_source_summary(
@@ -364,5 +365,5 @@ The above content is from the documentation for '{source_id}'. Please provide a 
             return summary
         
         except Exception as e:
-            print(f"Error generating summary with LLM for {source_id}: {e}. Using default summary.")
+            logger.error(f"Error generating summary with LLM for {source_id}: {e}. Using default summary.")
             return default_summary

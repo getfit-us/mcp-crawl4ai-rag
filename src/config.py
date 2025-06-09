@@ -68,7 +68,7 @@ def get_settings() -> Settings:
     """Get or create the global settings instance."""
     global settings
     if settings is None:
-        settings = Settings()
+        settings = Settings()  # type: ignore[call-arg]  # BaseSettings loads from env
         settings.validate_required_fields()
     return settings
 

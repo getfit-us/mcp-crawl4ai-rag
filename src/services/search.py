@@ -1,10 +1,13 @@
 """Search service for document and code example retrieval."""
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from src.config import get_settings
 from src.models import SearchRequest, SearchResult, SearchResponse, SearchType
 from src.services.embeddings import EmbeddingService
+
+logger = logging.getLogger(__name__)
 
 
 class SearchService:
@@ -75,7 +78,7 @@ class SearchService:
                 search_results.append(SearchResult(
                     content=doc.get('content', ''),
                     url=doc.get('url', ''),
-                    source=doc.get('source', ''),
+                    source=doc.get('source_id', ''),  # Fixed: DB returns source_id
                     chunk_number=doc.get('chunk_number', 0),
                     similarity_score=doc.get('similarity', 0.0),
                     metadata=doc.get('metadata', {})
@@ -84,7 +87,7 @@ class SearchService:
             return search_results
             
         except Exception as e:
-            print(f"Error searching documents: {e}")
+            logger.error(f"Error searching documents: {e}")
             return []
     
     async def search_code_examples(
@@ -143,7 +146,7 @@ class SearchService:
             result = self.client.rpc('match_code_examples', params).execute()
             return result.data
         except Exception as e:
-            print(f"Error searching code examples: {e}")
+            logger.error(f"Error searching code examples: {e}")
             return []
     
     async def perform_search(
@@ -197,14 +200,14 @@ class SearchService:
                 # Convert code examples to SearchResult objects
                 for code_ex in code_data:
                     code_results.append(SearchResult(
-                        content=code_ex.get('code', ''),
+                        content=code_ex.get('content', ''),  # Fixed: DB returns content not code
                         url=code_ex.get('url', ''),
-                        source=code_ex.get('source', ''),
+                        source=code_ex.get('source_id', ''),  # Fixed: DB returns source_id
                         chunk_number=code_ex.get('chunk_number', 0),
                         similarity_score=code_ex.get('similarity', 0.0),
                         metadata={
                             'type': 'code_example',
-                            'language': code_ex.get('language', 'unknown'),
+                            'language': code_ex.get('metadata', {}).get('language', 'unknown'),  # Language is in metadata
                             'summary': code_ex.get('summary', ''),
                             **code_ex.get('metadata', {})
                         }
@@ -280,6 +283,6 @@ class SearchService:
             return reranked_results
             
         except Exception as e:
-            print(f"Error during reranking: {e}")
+            logger.error(f"Error during reranking: {e}")
             # Return original results if reranking fails
             return results

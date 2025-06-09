@@ -93,7 +93,7 @@ class TestReranker:
         
         mock_cross_encoder.predict.return_value = [0.9, 0.8, 0.7]
         
-        reranked = reranker.rerank_results("query", sample_results, content_key="text")
+        reranker.rerank_results("query", sample_results, content_key="text")
         
         # Verify it used the correct content key
         expected_pairs = [

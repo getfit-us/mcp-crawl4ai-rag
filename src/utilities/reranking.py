@@ -1,10 +1,13 @@
 """Reranking utilities for search result optimization."""
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from sentence_transformers import CrossEncoder
 
 from src.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 class Reranker:
@@ -68,7 +71,7 @@ class Reranker:
             
             return reranked
         except Exception as e:
-            print(f"Error during reranking: {e}")
+            logger.error(f"Error during reranking: {e}")
             return results
     
     def filter_by_threshold(

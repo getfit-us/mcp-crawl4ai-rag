@@ -1,12 +1,12 @@
 """Shared pytest fixtures for all tests."""
 
 import pytest
-from typing import Any
+from typing import Any, AsyncIterator
 from unittest.mock import Mock, AsyncMock
 
 
 @pytest.fixture
-def test_settings():
+def test_settings() -> Any:
     """Provide test settings without requiring environment variables."""
     from types import SimpleNamespace
     
@@ -36,7 +36,7 @@ def test_settings():
 
 
 @pytest.fixture
-def mock_supabase_client():
+def mock_supabase_client() -> Mock:
     """Mock Supabase client for testing."""
     client = Mock()
     
@@ -56,7 +56,7 @@ def mock_supabase_client():
 
 
 @pytest.fixture
-def mock_openai_client():
+def mock_openai_client() -> Mock:
     """Mock OpenAI client for testing."""
     client = Mock()
     
@@ -77,7 +77,7 @@ def mock_openai_client():
 
 
 @pytest.fixture
-def mock_crawler():
+def mock_crawler() -> Mock:
     """Mock Crawl4AI crawler for testing."""
     crawler = Mock()
     crawler.arun = AsyncMock(return_value=Mock(
@@ -96,7 +96,7 @@ def mock_crawler():
 
 
 @pytest.fixture
-def sample_document():
+def sample_document() -> dict[str, Any]:
     """Sample document for testing."""
     return {
         "url": "https://example.com/test",
@@ -113,7 +113,7 @@ def sample_document():
 
 
 @pytest.fixture
-def sample_code_example():
+def sample_code_example() -> dict[str, Any]:
     """Sample code example for testing."""
     return {
         "code": "def hello():\n    print('Hello, world!')",
@@ -126,7 +126,7 @@ def sample_code_example():
 
 
 @pytest.fixture
-async def async_iterator(items):
+async def async_iterator(items: list[Any]) -> AsyncIterator[Any]:
     """Create an async iterator from a list of items."""
     for item in items:
         yield item

@@ -1,6 +1,7 @@
 """Tool for smart crawling with URL type detection."""
 
 import json
+import logging
 from urllib.parse import urlparse
 
 from mcp.server.fastmcp import Context
@@ -11,6 +12,8 @@ from src.services.embeddings import EmbeddingService
 from src.services.crawling import CrawlingService
 from src.utilities.text_processing import TextProcessor
 from src.models import CrawlContext
+
+logger = logging.getLogger(__name__)
 
 
 @mcp.tool()
@@ -219,7 +222,7 @@ async def smart_crawl_url(
                 processed_urls.append(result_url)
                 
             except Exception as e:
-                print(f"Error processing {result.get('url', 'unknown URL')}: {e}")
+                logger.error(f"Error processing {result.get('url', 'unknown URL')}: {e}")
                 continue
         
         # Update source info for each unique source

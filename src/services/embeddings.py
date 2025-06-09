@@ -1,17 +1,20 @@
 """Embeddings service for creating text embeddings using OpenAI."""
 
 import asyncio
-from typing import List, Optional, Tuple
+import logging
+from typing import Any, Callable, List, Optional, Tuple
 
 import openai
 
 from src.config import get_settings
 
+logger = logging.getLogger(__name__)
+
 
 class EmbeddingService:
     """Service for managing text embeddings using OpenAI API."""
     
-    def __init__(self, settings: Optional[any] = None):
+    def __init__(self, settings: Optional[Any] = None):
         """
         Initialize embedding service.
         
@@ -22,6 +25,19 @@ class EmbeddingService:
         self.client = openai.OpenAI(api_key=self.settings.openai_api_key)
         self.max_retries = 3
         self.retry_delay = 1.0
+    
+    async def _run_in_executor(self, func: Callable[[], Any]) -> Any:
+        """
+        Run a synchronous function in a thread pool executor.
+        
+        Args:
+            func: Synchronous function to execute
+            
+        Returns:
+            Result from the function execution
+        """
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, func)
     
     async def create_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
         """
@@ -55,13 +71,13 @@ class EmbeddingService:
             except Exception as e:
                 if "rate_limit_exceeded" in str(e).lower() and retry < self.max_retries - 1:
                     wait_time = self.retry_delay * (2 ** retry)
-                    print(f"Rate limit hit. Waiting {wait_time} seconds...")
+                    logger.warning(f"Rate limit hit. Waiting {wait_time} seconds...")
                     await asyncio.sleep(wait_time)
                     continue
                     
                 # If error is not rate limit or last retry, handle batch failure
                 if retry == self.max_retries - 1:
-                    print(f"Failed to create batch embeddings after {self.max_retries} retries. Creating individual embeddings...")
+                    logger.error(f"Failed to create batch embeddings after {self.max_retries} retries. Creating individual embeddings...")
                     
                     # Fall back to individual embeddings
                     embeddings = []
@@ -82,7 +98,7 @@ class EmbeddingService:
                                 await asyncio.sleep(0.1)
                                 
                         except Exception as ind_e:
-                            print(f"Error creating embedding for text {i}: {ind_e}")
+                            logger.error(f"Error creating embedding for text {i}: {ind_e}")
                             # Return zero embedding for failed texts
                             embeddings.append([0.0] * self.settings.embedding_dimensions)
                     
@@ -105,7 +121,7 @@ class EmbeddingService:
             embeddings = await self.create_embeddings_batch([text])
             return embeddings[0] if embeddings else [0.0] * self.settings.embedding_dimensions
         except Exception as e:
-            print(f"Error creating embedding: {e}")
+            logger.error(f"Error creating embedding: {e}")
             # Return zero embedding if there's an error
             return [0.0] * self.settings.embedding_dimensions
     
@@ -161,7 +177,7 @@ Please give a short succinct context to situate this chunk within the whole docu
             return contextual_text, True
             
         except Exception as e:
-            print(f"Error generating contextual embedding: {e}. Using original chunk instead.")
+            logger.error(f"Error generating contextual embedding: {e}. Using original chunk instead.")
             return chunk, False
     
     async def process_chunks_with_context(
@@ -194,7 +210,7 @@ Please give a short succinct context to situate this chunk within the whole docu
         processed_results = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                print(f"Error processing chunk {i}: {result}")
+                logger.error(f"Error processing chunk {i}: {result}")
                 # Use original chunk if contextualization failed
                 processed_results.append((chunks[i][1], False))
             else:

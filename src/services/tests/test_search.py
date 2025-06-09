@@ -32,7 +32,7 @@ def mock_search_results():
         {
             'content': 'First result content',
             'url': 'https://example.com/1',
-            'source': 'example.com',
+            'source_id': 'example.com',  # Fixed: DB returns 'source_id' not 'source'
             'chunk_number': 1,
             'similarity': 0.9,
             'metadata': {'title': 'First'}
@@ -40,7 +40,7 @@ def mock_search_results():
         {
             'content': 'Second result content',
             'url': 'https://example.com/2',
-            'source': 'example.com',
+            'source_id': 'example.com',  # Fixed: DB returns 'source_id' not 'source'
             'chunk_number': 2,
             'similarity': 0.8,
             'metadata': {'title': 'Second'}
@@ -48,7 +48,7 @@ def mock_search_results():
         {
             'content': 'Third result content',
             'url': 'https://example.com/3',
-            'source': 'example.com',
+            'source_id': 'example.com',  # Fixed: DB returns 'source_id' not 'source'
             'chunk_number': 3,
             'similarity': 0.7,
             'metadata': {'title': 'Third'}
@@ -61,14 +61,13 @@ def mock_code_results():
     """Mock code example results."""
     return [
         {
-            'code': 'def example():\n    return "Hello"',
+            'content': 'def example():\n    return "Hello"',  # Fixed: DB returns 'content' not 'code'
             'url': 'https://example.com/code1',
-            'source': 'example.com',
+            'source_id': 'example.com',  # Fixed: DB returns 'source_id' not 'source'
             'chunk_number': 1,
             'similarity': 0.85,
-            'language': 'python',
             'summary': 'Example function',
-            'metadata': {}
+            'metadata': {'language': 'python'}  # Fixed: language is in metadata
         }
     ]
 
@@ -154,8 +153,8 @@ async def test_search_code_examples_success(search_service, mock_supabase_client
     )
     
     assert len(results) == 1
-    assert results[0]['code'] == 'def example():\n    return "Hello"'
-    assert results[0]['language'] == 'python'
+    assert results[0]['content'] == 'def example():\n    return "Hello"'  # Fixed: DB returns 'content' not 'code'
+    assert results[0]['metadata']['language'] == 'python'  # Fixed: language is in metadata
     
     # Enhanced query was used during search
 

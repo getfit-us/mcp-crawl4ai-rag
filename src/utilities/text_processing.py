@@ -1,11 +1,13 @@
 """Text processing utilities for chunking, context generation, and content extraction."""
 
-import asyncio
+import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.config import get_settings
 from src.services.embeddings import EmbeddingService
+
+logger = logging.getLogger(__name__)
 
 
 class TextProcessor:
@@ -145,7 +147,7 @@ Please give a short succinct context to situate this chunk within the overall do
             return contextual_text, True
         
         except Exception as e:
-            print(f"Error generating contextual embedding: {e}. Using original chunk instead.")
+            logger.error(f"Error generating contextual embedding: {e}. Using original chunk instead.")
             return chunk, False
     
     async def process_chunk_with_context(

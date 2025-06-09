@@ -2,11 +2,9 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-from typing import List, Dict, Any
 
 from src.services.crawling import CrawlingService
 from src.services.embeddings import EmbeddingService
-from crawl4ai import CrawlerRunConfig, CacheMode
 
 
 @pytest.fixture

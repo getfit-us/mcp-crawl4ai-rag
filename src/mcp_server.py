@@ -1,5 +1,6 @@
 """MCP server setup and initialization."""
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -10,9 +11,16 @@ from sentence_transformers import CrossEncoder
 from src.config import get_settings
 from src.models import CrawlContext
 
+logger = logging.getLogger(__name__)
+
 
 def get_supabase_client():
-    """Get Supabase client with configuration from settings."""
+    """
+    Get Supabase client with configuration from settings.
+    
+    Returns:
+        Client: Configured Supabase client instance
+    """
     from supabase import create_client
     
     settings = get_settings()
@@ -51,7 +59,7 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[CrawlContext]:
         try:
             reranking_model = CrossEncoder(settings.cross_encoder_model)
         except Exception as e:
-            print(f"Failed to load reranking model: {e}")
+            logger.warning(f"Failed to load reranking model: {e}")
             reranking_model = None
     
     # Create context
@@ -92,14 +100,14 @@ async def run_server() -> None:
     settings = get_settings()
     
     # Import tools here to avoid circular imports
-    from src.tools.crawl_single_page import crawl_single_page
-    from src.tools.smart_crawl_url import smart_crawl_url
-    from src.tools.get_available_sources import get_available_sources
-    from src.tools.perform_rag_query import perform_rag_query
-    from src.tools.search_code_examples import search_code_examples
+    from src.tools.crawl_single_page import crawl_single_page  # noqa: F401
+    from src.tools.smart_crawl_url import smart_crawl_url  # noqa: F401
+    from src.tools.get_available_sources import get_available_sources  # noqa: F401
+    from src.tools.perform_rag_query import perform_rag_query  # noqa: F401
+    from src.tools.search_code_examples import search_code_examples  # noqa: F401
     
-    print(f"Starting MCP server on {settings.host}:{settings.port}")
-    print(f"Transport: {settings.transport}")
+    logger.info(f"Starting MCP server on {settings.host}:{settings.port}")
+    logger.info(f"Transport: {settings.transport}")
     
     # Run based on transport
     if settings.transport == "stdio":

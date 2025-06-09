@@ -1,7 +1,6 @@
 """Tool for performing RAG queries."""
 
 import json
-from typing import Dict, Any, List
 from sentence_transformers import CrossEncoder
 
 from mcp.server.fastmcp import Context

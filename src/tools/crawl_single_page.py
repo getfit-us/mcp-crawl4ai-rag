@@ -104,7 +104,7 @@ async def crawl_single_page(ctx: Context, url: str) -> str:
         )
         
         # Add documents to database
-        doc_result = await database_service.add_documents(
+        await database_service.add_documents(
             urls=urls,
             chunk_numbers=chunk_numbers,
             contents=contents,

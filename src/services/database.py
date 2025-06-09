@@ -1,9 +1,12 @@
 """Database service for Supabase operations."""
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from src.config import get_settings
 from src.models import SourceInfo
+
+logger = logging.getLogger(__name__)
 
 
 class DatabaseService:
@@ -81,24 +84,13 @@ class DatabaseService:
                 batch_urls, batch_chunk_numbers, batch_contents, 
                 batch_embeddings, batch_metadatas, batch_sources
             )):
-                # Create contextual content if enabled
-                contextual_content = None
-                if self.settings.use_contextual_embeddings and url in url_to_full_document:
-                    contextual_content = self._generate_contextual_content(
-                        content, 
-                        url_to_full_document[url], 
-                        chunk_num
-                    )
-                
                 batch_data.append({
                     'url': url,
                     'chunk_number': chunk_num,
                     'content': content,
                     'embedding': embedding,
                     'metadata': metadata,
-                    'source': source,
-                    'word_count': len(content.split()),
-                    'contextual_content': contextual_content
+                    'source_id': source  # Fixed: table column is 'source_id' not 'source'
                 })
             
             # Insert batch
@@ -107,7 +99,7 @@ class DatabaseService:
                     self.client.table('crawled_pages').insert(batch_data).execute()
                     documents_added += len(batch_data)
             except Exception as e:
-                print(f"Error inserting batch {i//batch_size + 1}: {e}")
+                logger.error(f"Error inserting batch {i//batch_size + 1}: {e}")
                 continue
         
         return {
@@ -150,7 +142,7 @@ class DatabaseService:
             try:
                 self.client.table('code_examples').delete().eq('url', url).execute()
             except Exception as e:
-                print(f"Error deleting existing code examples for {url}: {e}")
+                logger.error(f"Error deleting existing code examples for {url}: {e}")
         
         # Process code examples in batches
         total_examples = len(urls)
@@ -181,15 +173,17 @@ class DatabaseService:
                     if len(first_line) > 3:
                         language = first_line[3:].strip()
                 
+                # Add language to metadata
+                metadata['language'] = language
+                
                 batch_data.append({
                     'url': url,
                     'chunk_number': chunk_num,
-                    'code': code,
+                    'content': code,  # Fixed: table column is 'content' not 'code'
                     'summary': summary,
                     'embedding': embedding,
                     'metadata': metadata,
-                    'source': source,
-                    'language': language
+                    'source_id': source  # Fixed: table column is 'source_id' not 'source'
                 })
             
             # Insert batch
@@ -198,7 +192,7 @@ class DatabaseService:
                     self.client.table('code_examples').insert(batch_data).execute()
                     examples_added += len(batch_data)
             except Exception as e:
-                print(f"Error inserting code examples batch {i//batch_size + 1}: {e}")
+                logger.error(f"Error inserting code examples batch {i//batch_size + 1}: {e}")
                 continue
         
         return {
@@ -239,14 +233,14 @@ class DatabaseService:
                     'summary': summary,
                     'total_word_count': word_count
                 }).execute()
-                print(f"Created new source: {source_id}")
+                logger.info(f"Created new source: {source_id}")
             else:
-                print(f"Updated source: {source_id}")
+                logger.info(f"Updated source: {source_id}")
                 
             return {"success": True, "source_id": source_id}
             
         except Exception as e:
-            print(f"Error updating source info: {e}")
+            logger.error(f"Error updating source info: {e}")
             return {"success": False, "error": str(e)}
     
     async def get_available_sources(self) -> List[SourceInfo]:
@@ -293,7 +287,7 @@ class DatabaseService:
             return sources
             
         except Exception as e:
-            print(f"Error getting available sources: {e}")
+            logger.error(f"Error getting available sources: {e}")
             return []
     
     
