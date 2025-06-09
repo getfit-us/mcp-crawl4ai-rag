@@ -6,8 +6,8 @@ from unittest.mock import Mock, AsyncMock, patch
 from types import SimpleNamespace
 
 from datetime import datetime
-from src.tools.get_available_sources import get_available_sources
-from src.models import SourceInfo
+from crawl4ai_mcp.tools.get_available_sources import get_available_sources
+from crawl4ai_mcp.models import SourceInfo
 
 
 @pytest.fixture
@@ -28,7 +28,7 @@ def mock_context():
 @pytest.fixture
 def mock_database_service():
     """Create mock database service."""
-    with patch('src.tools.get_available_sources.DatabaseService') as MockDatabase:
+    with patch('crawl4ai_mcp.tools.get_available_sources.DatabaseService') as MockDatabase:
         database_instance = Mock()
         
         # Mock source data

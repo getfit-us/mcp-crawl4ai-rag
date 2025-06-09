@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import Mock
 
-from src.services.database import DatabaseService
-from src.models import SourceInfo
+from crawl4ai_mcp.services.database import DatabaseService
+from crawl4ai_mcp.models import SourceInfo
 
 
 @pytest.fixture
@@ -244,6 +244,95 @@ async def test_get_available_sources_error(database_service, mock_supabase_clien
     sources = await database_service.get_available_sources()
     
     assert sources == []
+
+
+@pytest.mark.asyncio
+async def test_get_available_sources_column_names(database_service, mock_supabase_client):
+    """Test that get_available_sources uses correct column names (source_id not source)."""
+    # Mock sources data
+    mock_sources_data = [
+        {
+            'source_id': 'test.com',
+            'display_name': 'Test Site',
+            'summary': 'Test source summary',
+            'created_at': '2024-01-01T00:00:00Z',
+            'updated_at': '2024-01-02T00:00:00Z',
+            'content_types': ['html'],
+            'total_word_count': 2000
+        }
+    ]
+    
+    # Set up sources table mock
+    sources_table_mock = Mock()
+    sources_table_mock.select.return_value.execute.return_value = Mock(data=mock_sources_data)
+    
+    # Mock for tracking eq() calls on crawled_pages table
+    crawled_pages_eq_calls = []
+    crawled_pages_mock = Mock()
+    
+    def track_crawled_pages_eq(field, value):
+        crawled_pages_eq_calls.append((field, value))
+        return crawled_pages_mock
+    
+    crawled_pages_mock.select.return_value.eq.side_effect = track_crawled_pages_eq
+    crawled_pages_mock.execute.return_value = Mock(data=[], count=15)
+    
+    # Mock for tracking eq() calls on code_examples table
+    code_examples_eq_calls = []
+    code_examples_mock = Mock()
+    
+    def track_code_examples_eq(field, value):
+        code_examples_eq_calls.append((field, value))
+        return code_examples_mock
+    
+    code_examples_mock.select.return_value.eq.side_effect = track_code_examples_eq
+    code_examples_mock.execute.return_value = Mock(data=[], count=8)
+    
+    # Mock for chunks query
+    chunks_mock = Mock()
+    chunks_mock.select.return_value.eq.return_value.execute.return_value = Mock(
+        data=[{"chunk_number": 1}, {"chunk_number": 2}, {"chunk_number": 3}, {"chunk_number": 4}]
+    )
+    
+    # Counter to track table calls
+    call_count = 0
+    
+    def table_side_effect(table_name):
+        nonlocal call_count
+        call_count += 1
+        
+        if table_name == 'sources':
+            return sources_table_mock
+        elif table_name == 'crawled_pages':
+            if call_count in [2, 5]:  # Document count and chunks calls
+                return crawled_pages_mock
+            else:  # Chunk data call
+                return chunks_mock
+        elif table_name == 'code_examples':
+            return code_examples_mock
+        
+        return Mock()
+    
+    mock_supabase_client.table.side_effect = table_side_effect
+    
+    # Execute
+    sources = await database_service.get_available_sources()
+    
+    # Verify the eq() calls used source_id, not source
+    assert len(crawled_pages_eq_calls) == 1
+    assert crawled_pages_eq_calls[0][0] == 'source_id'
+    assert crawled_pages_eq_calls[0][1] == 'test.com'
+    
+    assert len(code_examples_eq_calls) == 1
+    assert code_examples_eq_calls[0][0] == 'source_id'
+    assert code_examples_eq_calls[0][1] == 'test.com'
+    
+    # Verify result
+    assert len(sources) == 1
+    assert sources[0].source == 'test.com'  # Note: SourceInfo model uses 'source' not 'source_id'
+    assert sources[0].total_documents == 15
+    assert sources[0].total_code_examples == 8
+    assert sources[0].total_chunks == 4
 
 
 @pytest.mark.asyncio

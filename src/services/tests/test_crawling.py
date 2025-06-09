@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
 
-from src.services.crawling import CrawlingService
-from src.services.embeddings import EmbeddingService
+from crawl4ai_mcp.services.crawling import CrawlingService
+from crawl4ai_mcp.services.embeddings import EmbeddingService
 
 
 @pytest.fixture

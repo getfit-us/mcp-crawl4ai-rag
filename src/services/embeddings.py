@@ -6,7 +6,7 @@ from typing import Any, Callable, List, Optional, Tuple
 
 import openai
 
-from src.config import get_settings
+from crawl4ai_mcp.config import get_settings
 
 logger = logging.getLogger(__name__)
 

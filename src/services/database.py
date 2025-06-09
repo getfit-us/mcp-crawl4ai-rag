@@ -3,8 +3,8 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from src.config import get_settings
-from src.models import SourceInfo
+from crawl4ai_mcp.config import get_settings
+from crawl4ai_mcp.models import SourceInfo
 
 logger = logging.getLogger(__name__)
 

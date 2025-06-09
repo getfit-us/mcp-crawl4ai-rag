@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import Mock, patch
 
-from src.services.embeddings import EmbeddingService
+from crawl4ai_mcp.services.embeddings import EmbeddingService
 
 
 @pytest.fixture

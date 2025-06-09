@@ -1,16 +1,18 @@
 """Tool for crawling a single web page."""
 
 import json
+from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 from mcp.server.fastmcp import Context
 
-from src.mcp_server import mcp
-from src.services.database import DatabaseService
-from src.services.embeddings import EmbeddingService
-from src.services.crawling import CrawlingService
-from src.utilities.text_processing import TextProcessor
-from src.models import CrawlContext
+from crawl4ai_mcp.mcp_server import mcp
+from crawl4ai_mcp.services.database import DatabaseService
+from crawl4ai_mcp.services.embeddings import EmbeddingService
+from crawl4ai_mcp.services.crawling import CrawlingService
+from crawl4ai_mcp.utilities.metadata import create_chunk_metadata
+from crawl4ai_mcp.utilities.text_processing import TextProcessor
+from crawl4ai_mcp.models import CrawlContext
 
 
 @mcp.tool()
@@ -101,15 +103,15 @@ async def crawl_single_page(ctx: Context, url: str) -> str:
             
             # Extract metadata
             section_info = text_processor.extract_section_info(chunk)
-            # Add source to metadata to match original implementation
-            section_info["source"] = source_id
-            section_info["url"] = url
-            section_info["chunk_index"] = i
-            section_info["crawl_type"] = "single_page"
-            # Use current datetime instead of context.timestamp which doesn't exist
-            from datetime import datetime, timezone
-            section_info["crawl_time"] = datetime.now(timezone.utc).isoformat()
-            metadatas.append(section_info)
+            metadata = create_chunk_metadata(
+                chunk=chunk,
+                source_id=source_id,
+                url=url,
+                chunk_index=i,
+                crawl_type="single_page",
+                section_info=section_info
+            )
+            metadatas.append(metadata)
         
         
         # Add documents to database

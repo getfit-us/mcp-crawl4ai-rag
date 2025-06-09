@@ -8,10 +8,13 @@ from xml.etree import ElementTree
 
 from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode, MemoryAdaptiveDispatcher
 
-from src.config import get_settings
-from src.services.embeddings import EmbeddingService
+from crawl4ai_mcp.config import get_settings
+from crawl4ai_mcp.services.embeddings import EmbeddingService
 
 logger = logging.getLogger(__name__)
+
+# Constants
+MAX_FAILURES_TO_LOG = 5
 
 
 class CrawlingService:
@@ -106,7 +109,7 @@ class CrawlingService:
         Returns:
             List of dictionaries with URL and markdown content
         """
-        logger.info(f"Starting crawl_batch with {len(urls)} URLs")
+        logger.debug(f"Starting crawl_batch with {len(urls)} URLs")
         crawl_config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS, stream=False)
         dispatcher = MemoryAdaptiveDispatcher(
             memory_threshold_percent=70.0,
@@ -116,17 +119,17 @@ class CrawlingService:
 
         try:
             results = await self.crawler.arun_many(urls=urls, config=crawl_config, dispatcher=dispatcher)
-            logger.info(f"arun_many returned {len(results)} results")
+            logger.debug(f"arun_many returned {len(results)} results")
             
             successful_results = [{'url': r.url, 'markdown': r.markdown} for r in results if r.success and r.markdown]
-            logger.info(f"Filtered to {len(successful_results)} successful results")
+            logger.info(f"Filtered to {len(successful_results)} successful results from {len(urls)} URLs")
             
             # Log some failures if any
             failed_results = [r for r in results if not r.success or not r.markdown]
             if failed_results:
-                logger.warning(f"{len(failed_results)} URLs failed to crawl")
-                for failed in failed_results[:5]:  # Log first 5 failures
-                    logger.warning(f"Failed: {failed.url} - Error: {getattr(failed, 'error_message', 'No markdown content')}")
+                logger.error(f"{len(failed_results)} URLs failed to crawl")
+                for failed in failed_results[:MAX_FAILURES_TO_LOG]:
+                    logger.error(f"Failed: {failed.url} - Error: {getattr(failed, 'error_message', 'No markdown content')}")
             
             return successful_results
         except Exception as e:

@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 from types import SimpleNamespace
 
-from src.tools.crawl_single_page import crawl_single_page
+from crawl4ai_mcp.tools.crawl_single_page import crawl_single_page
 
 
 @pytest.fixture
@@ -20,7 +20,8 @@ def mock_context():
         settings=SimpleNamespace(
             default_chunk_size=5000,
             use_contextual_embeddings=False,
-            use_agentic_rag=False
+            use_agentic_rag=False,
+            openai_api_key="test-key"
         )
     )
     
@@ -31,10 +32,10 @@ def mock_context():
 @pytest.fixture
 def mock_services():
     """Create mock services."""
-    with patch('src.tools.crawl_single_page.EmbeddingService') as MockEmbedding, \
-         patch('src.tools.crawl_single_page.DatabaseService') as MockDatabase, \
-         patch('src.tools.crawl_single_page.CrawlingService') as MockCrawling, \
-         patch('src.tools.crawl_single_page.TextProcessor') as MockTextProcessor:
+    with patch('crawl4ai_mcp.tools.crawl_single_page.EmbeddingService') as MockEmbedding, \
+         patch('crawl4ai_mcp.tools.crawl_single_page.DatabaseService') as MockDatabase, \
+         patch('crawl4ai_mcp.tools.crawl_single_page.CrawlingService') as MockCrawling, \
+         patch('crawl4ai_mcp.tools.crawl_single_page.TextProcessor') as MockTextProcessor:
         
         # Mock embedding service
         embedding_instance = Mock()

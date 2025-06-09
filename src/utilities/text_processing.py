@@ -4,8 +4,8 @@ import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-from src.config import get_settings
-from src.services.embeddings import EmbeddingService
+from crawl4ai_mcp.config import get_settings
+from crawl4ai_mcp.services.embeddings import EmbeddingService
 
 logger = logging.getLogger(__name__)
 
@@ -191,7 +191,7 @@ Please give a short succinct context to situate this chunk within the overall do
             The generated summary
         """
         # Import here to avoid circular dependency
-        from src.services.crawling import CrawlingService
+        from crawl4ai_mcp.services.crawling import CrawlingService
         
         # Create a temporary crawling service instance
         crawling_service = CrawlingService(

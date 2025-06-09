@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 from types import SimpleNamespace
 
-from src.tools.smart_crawl_url import smart_crawl_url
+from crawl4ai_mcp.tools.smart_crawl_url import smart_crawl_url
 
 
 @pytest.fixture
@@ -31,10 +31,10 @@ def mock_context():
 @pytest.fixture
 def mock_services():
     """Create mock services."""
-    with patch('src.tools.smart_crawl_url.EmbeddingService') as MockEmbedding, \
-         patch('src.tools.smart_crawl_url.DatabaseService') as MockDatabase, \
-         patch('src.tools.smart_crawl_url.CrawlingService') as MockCrawling, \
-         patch('src.tools.smart_crawl_url.TextProcessor') as MockTextProcessor:
+    with patch('crawl4ai_mcp.tools.smart_crawl_url.EmbeddingService') as MockEmbedding, \
+         patch('crawl4ai_mcp.tools.smart_crawl_url.DatabaseService') as MockDatabase, \
+         patch('crawl4ai_mcp.tools.smart_crawl_url.CrawlingService') as MockCrawling, \
+         patch('crawl4ai_mcp.tools.smart_crawl_url.TextProcessor') as MockTextProcessor:
         
         # Mock embedding service
         embedding_instance = Mock()

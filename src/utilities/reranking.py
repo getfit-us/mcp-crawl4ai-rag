@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from sentence_transformers import CrossEncoder
 
-from src.config import get_settings
+from crawl4ai_mcp.config import get_settings
 
 logger = logging.getLogger(__name__)
 

@@ -4,9 +4,9 @@ import json
 
 from mcp.server.fastmcp import Context
 
-from src.mcp_server import mcp
-from src.services.database import DatabaseService
-from src.models import CrawlContext
+from crawl4ai_mcp.mcp_server import mcp
+from crawl4ai_mcp.services.database import DatabaseService
+from crawl4ai_mcp.models import CrawlContext
 
 
 @mcp.tool()

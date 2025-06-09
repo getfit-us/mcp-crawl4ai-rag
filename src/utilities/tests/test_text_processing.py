@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import Mock, patch
 
-from src.utilities.text_processing import TextProcessor
-from src.services.embeddings import EmbeddingService
+from crawl4ai_mcp.utilities.text_processing import TextProcessor
+from crawl4ai_mcp.services.embeddings import EmbeddingService
 
 
 @pytest.fixture
@@ -200,7 +200,7 @@ class TestCodeExampleProcessing:
     async def test_process_code_example(self, text_processor, mock_embedding_service):
         """Test code example processing."""
         # Mock the crawling service's generate_code_example_summary
-        with patch('src.services.crawling.CrawlingService') as MockCrawlingService:
+        with patch('crawl4ai_mcp.services.crawling.CrawlingService') as MockCrawlingService:
             mock_instance = MockCrawlingService.return_value
             mock_instance.generate_code_example_summary = Mock(return_value="Code example summary")
             

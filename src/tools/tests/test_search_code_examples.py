@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 from types import SimpleNamespace
 
-from src.tools.search_code_examples import search_code_examples
+from crawl4ai_mcp.tools.search_code_examples import search_code_examples
 
 
 @pytest.fixture
@@ -31,7 +31,7 @@ def mock_context():
 @pytest.fixture
 def mock_search_service():
     """Create mock search service."""
-    with patch('src.tools.search_code_examples.SearchService') as MockSearch:
+    with patch('crawl4ai_mcp.tools.search_code_examples.SearchService') as MockSearch:
         search_instance = Mock()
         
         # Create sample code example results
@@ -128,8 +128,8 @@ async def test_search_code_examples_with_reranking(mock_context, mock_search_ser
     # Enable reranking
     mock_context.request_context.lifespan_context.settings.use_reranking = True
     
-    with patch('src.tools.search_code_examples.CrossEncoder') as MockCrossEncoder, \
-         patch('src.tools.search_code_examples.Reranker') as MockReranker:
+    with patch('crawl4ai_mcp.tools.search_code_examples.CrossEncoder') as MockCrossEncoder, \
+         patch('crawl4ai_mcp.tools.search_code_examples.Reranker') as MockReranker:
         
         # Mock cross encoder
         mock_model = Mock()

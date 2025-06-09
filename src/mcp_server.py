@@ -8,8 +8,8 @@ from crawl4ai import AsyncWebCrawler, BrowserConfig
 from mcp.server.fastmcp import FastMCP
 from sentence_transformers import CrossEncoder
 
-from src.config import get_settings
-from src.models import CrawlContext
+from crawl4ai_mcp.config import get_settings
+from crawl4ai_mcp.models import CrawlContext
 
 logger = logging.getLogger(__name__)
 
@@ -100,11 +100,11 @@ async def run_server() -> None:
     settings = get_settings()
     
     # Import tools here to avoid circular imports
-    from src.tools.crawl_single_page import crawl_single_page  # noqa: F401
-    from src.tools.smart_crawl_url import smart_crawl_url  # noqa: F401
-    from src.tools.get_available_sources import get_available_sources  # noqa: F401
-    from src.tools.perform_rag_query import perform_rag_query  # noqa: F401
-    from src.tools.search_code_examples import search_code_examples  # noqa: F401
+    from crawl4ai_mcp.tools.crawl_single_page import crawl_single_page  # noqa: F401
+    from crawl4ai_mcp.tools.smart_crawl_url import smart_crawl_url  # noqa: F401
+    from crawl4ai_mcp.tools.get_available_sources import get_available_sources  # noqa: F401
+    from crawl4ai_mcp.tools.perform_rag_query import perform_rag_query  # noqa: F401
+    from crawl4ai_mcp.tools.search_code_examples import search_code_examples  # noqa: F401
     
     logger.info(f"Starting MCP server on {settings.host}:{settings.port}")
     logger.info(f"Transport: {settings.transport}")

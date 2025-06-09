@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import Mock, patch
 
-from src.utilities.reranking import Reranker
+from crawl4ai_mcp.utilities.reranking import Reranker
 
 
 @pytest.fixture
@@ -164,7 +164,7 @@ class TestReranker:
 class TestRerankerInitialization:
     """Test Reranker initialization."""
     
-    @patch('src.utilities.reranking.CrossEncoder')
+    @patch('crawl4ai_mcp.utilities.reranking.CrossEncoder')
     def test_init_with_reranking_enabled(self, MockCrossEncoder, test_settings):
         """Test initialization with reranking enabled."""
         test_settings.use_reranking = True

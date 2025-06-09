@@ -5,8 +5,8 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 from types import SimpleNamespace
 
-from src.tools.perform_rag_query import perform_rag_query
-from src.models import SearchResult, SearchResponse, SearchType
+from crawl4ai_mcp.tools.perform_rag_query import perform_rag_query
+from crawl4ai_mcp.models import SearchResult, SearchResponse, SearchType
 
 
 @pytest.fixture
@@ -33,7 +33,7 @@ def mock_context():
 @pytest.fixture
 def mock_search_service():
     """Create mock search service."""
-    with patch('src.tools.perform_rag_query.SearchService') as MockSearch:
+    with patch('crawl4ai_mcp.tools.perform_rag_query.SearchService') as MockSearch:
         search_instance = Mock()
         
         # Create sample search results
@@ -133,8 +133,8 @@ async def test_perform_rag_query_with_reranking(mock_context, mock_search_servic
     # Enable reranking
     mock_context.request_context.lifespan_context.settings.use_reranking = True
     
-    with patch('src.tools.perform_rag_query.CrossEncoder') as MockCrossEncoder, \
-         patch('src.tools.perform_rag_query.Reranker') as MockReranker:
+    with patch('crawl4ai_mcp.tools.perform_rag_query.CrossEncoder') as MockCrossEncoder, \
+         patch('crawl4ai_mcp.tools.perform_rag_query.Reranker') as MockReranker:
         
         # Mock cross encoder
         mock_model = Mock()

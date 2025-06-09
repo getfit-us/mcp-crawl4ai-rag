@@ -3,9 +3,9 @@
 import pytest
 from unittest.mock import Mock
 
-from src.services.search import SearchService
-from src.services.embeddings import EmbeddingService
-from src.models import SearchRequest, SearchResult, SearchType
+from crawl4ai_mcp.services.search import SearchService
+from crawl4ai_mcp.services.embeddings import EmbeddingService
+from crawl4ai_mcp.models import SearchRequest, SearchResult, SearchType
 
 
 @pytest.fixture
@@ -120,10 +120,8 @@ async def test_search_documents_with_filters(search_service, mock_supabase_clien
     expected_params = {
         'query_embedding': [0.1] * 1536,
         'match_count': 5,
-        'filter': {
-            'category': 'tutorial',
-            'source': 'docs.example.com'
-        }
+        'filter': {'category': 'tutorial'},
+        'source_filter': 'docs.example.com'
     }
     mock_supabase_client.rpc.assert_called_once_with('match_crawled_pages', expected_params)
 
@@ -136,6 +134,21 @@ async def test_search_documents_error_handling(search_service, mock_supabase_cli
     
     results = await search_service.search_documents(query="test query")
     
+    assert results == []
+
+
+@pytest.mark.asyncio
+async def test_search_documents_embedding_error(search_service, mock_embedding_service):
+    """Test error handling when embedding creation fails."""
+    # Mock embedding service to raise an exception
+    mock_embedding_service.create_embedding.side_effect = Exception("Embedding API error")
+    
+    results = await search_service.search_documents(
+        query="test query",
+        match_count=10
+    )
+    
+    # Should return empty list when embedding fails
     assert results == []
 
 

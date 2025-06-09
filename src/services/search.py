@@ -3,9 +3,9 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from src.config import get_settings
-from src.models import SearchRequest, SearchResult, SearchResponse, SearchType
-from src.services.embeddings import EmbeddingService
+from crawl4ai_mcp.config import get_settings
+from crawl4ai_mcp.models import SearchRequest, SearchResult, SearchResponse, SearchType
+from crawl4ai_mcp.services.embeddings import EmbeddingService
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +47,12 @@ class SearchService:
         Returns:
             List of SearchResult objects
         """
-        # Create embedding for the query
-        query_embedding = await self.embedding_service.create_embedding(query)
+        try:
+            # Create embedding for the query
+            query_embedding = await self.embedding_service.create_embedding(query)
+        except Exception as e:
+            logger.error(f"Error creating query embedding: {e}")
+            return []
         
         # Build RPC parameters
         params = {
@@ -113,8 +117,12 @@ class SearchService:
             enhanced_query += f" in {language}"
         enhanced_query += f"\n\nSummary: Example code showing {query}"
         
-        # Create embedding for the enhanced query
-        query_embedding = await self.embedding_service.create_embedding(enhanced_query)
+        try:
+            # Create embedding for the enhanced query
+            query_embedding = await self.embedding_service.create_embedding(enhanced_query)
+        except Exception as e:
+            logger.error(f"Error creating code example query embedding: {e}")
+            return []
         
         # Build RPC parameters
         params = {
