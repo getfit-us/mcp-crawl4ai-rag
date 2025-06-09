@@ -8,3 +8,5 @@ crawl4ai_mcp.egg-info
 supabase
 
 PRPs/code_reviews
+
+.mcp.json

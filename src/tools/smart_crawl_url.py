@@ -73,12 +73,19 @@ async def smart_crawl_url(
             
         elif crawling_service.is_sitemap(url):
             # Parse sitemap and crawl all URLs
+            logger.info(f"Detected sitemap URL: {url}")
             urls_from_sitemap = crawling_service.parse_sitemap(url)
+            logger.info(f"Found {len(urls_from_sitemap)} URLs in sitemap")
+            
             if urls_from_sitemap:
+                logger.info(f"Starting batch crawl of {len(urls_from_sitemap)} URLs")
                 all_results = await crawling_service.crawl_batch(
                     urls_from_sitemap, 
                     max_concurrent=max_concurrent
                 )
+                logger.info(f"Batch crawl completed. Got {len(all_results)} results")
+            else:
+                logger.warning("No URLs found in sitemap")
             crawl_type = "sitemap"
             
         else:
@@ -103,6 +110,33 @@ async def smart_crawl_url(
         processed_urls = []
         source_ids = set()
         
+        # First, collect all unique source IDs
+        for result in all_results:
+            source_id = urlparse(result['url']).netloc
+            source_ids.add(source_id)
+        
+        # Update source info for each unique source BEFORE processing documents
+        for source_id in source_ids:
+            # Get all content for this source
+            source_content = "\n\n".join([
+                r['markdown'] for r in all_results 
+                if urlparse(r['url']).netloc == source_id
+            ])
+            
+            # Calculate total word count
+            total_word_count = len(source_content.split())
+            
+            # Generate summary
+            source_summary = await crawling_service.extract_source_summary(
+                source_id, source_content[:10000]
+            )
+            
+            await database_service.update_source_info(
+                source_id=source_id,
+                summary=source_summary,
+                word_count=total_word_count
+            )
+        
         for result in all_results:
             try:
                 result_url = result['url']
@@ -110,7 +144,6 @@ async def smart_crawl_url(
                 
                 # Extract source_id
                 source_id = urlparse(result_url).netloc
-                source_ids.add(source_id)
                 
                 # Chunk the content
                 chunks = text_processor.smart_chunk_markdown(
@@ -148,6 +181,14 @@ async def smart_crawl_url(
                     
                     # Extract metadata
                     section_info = text_processor.extract_section_info(chunk)
+                    # Add source to metadata to match original implementation
+                    section_info["source"] = source_id
+                    section_info["url"] = result_url
+                    section_info["chunk_index"] = i
+                    section_info["crawl_type"] = crawl_type
+                    # Use current datetime instead of context.timestamp which doesn't exist
+                    from datetime import datetime, timezone
+                    section_info["crawl_time"] = datetime.now(timezone.utc).isoformat()
                     metadatas.append(section_info)
                 
                 # Add documents to database
@@ -224,28 +265,6 @@ async def smart_crawl_url(
             except Exception as e:
                 logger.error(f"Error processing {result.get('url', 'unknown URL')}: {e}")
                 continue
-        
-        # Update source info for each unique source
-        for source_id in source_ids:
-            # Get all content for this source
-            source_content = "\n\n".join([
-                r['markdown'] for r in all_results 
-                if urlparse(r['url']).netloc == source_id
-            ])
-            
-            # Calculate total word count
-            total_word_count = len(source_content.split())
-            
-            # Generate summary
-            source_summary = await crawling_service.extract_source_summary(
-                source_id, source_content[:10000]
-            )
-            
-            await database_service.update_source_info(
-                source_id=source_id,
-                summary=source_summary,
-                word_count=total_word_count
-            )
         
         return json.dumps({
             "success": True,

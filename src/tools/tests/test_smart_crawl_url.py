@@ -260,3 +260,91 @@ async def test_smart_crawl_partial_failure(mock_context, mock_services):
     assert result_data["success"] is True
     assert result_data["urls_processed"] == 1  # Only first URL succeeded
     assert result_data["total_chunks_created"] == 3  # Only chunks from first URL
+
+
+@pytest.mark.asyncio
+async def test_metadata_timestamp_format(mock_context, mock_services):
+    """Test that metadata contains properly formatted timestamp."""
+    # Mock crawl result
+    mock_services['crawling'].crawl_recursive_internal_links.return_value = [
+        {"url": "https://example.com", "markdown": "Test content"}
+    ]
+    
+    # Track the metadata passed to add_documents
+    captured_metadata = []
+    async def capture_add_documents(**kwargs):
+        captured_metadata.extend(kwargs.get('metadatas', []))
+        return {"success": True, "count": len(kwargs.get('contents', []))}
+    
+    mock_services['database'].add_documents = capture_add_documents
+    
+    result = await smart_crawl_url(mock_context, "https://example.com")
+    result_data = json.loads(result)
+    
+    assert result_data["success"] is True
+    assert len(captured_metadata) > 0
+    
+    # Check each metadata entry
+    for metadata in captured_metadata:
+        # Verify required fields exist
+        assert "crawl_time" in metadata
+        assert "crawl_type" in metadata
+        assert "source" in metadata
+        assert "url" in metadata
+        assert "chunk_index" in metadata
+        
+        # Verify timestamp format (ISO format with timezone)
+        crawl_time = metadata["crawl_time"]
+        assert isinstance(crawl_time, str)
+        assert "T" in crawl_time  # ISO format separator
+        assert "+" in crawl_time or "Z" in crawl_time  # Timezone indicator
+        
+        # Verify it can be parsed as a datetime
+        from datetime import datetime
+        datetime.fromisoformat(crawl_time.replace('Z', '+00:00'))
+
+
+@pytest.mark.asyncio
+async def test_sitemap_with_empty_url_list(mock_context, mock_services):
+    """Test handling of sitemap that returns no URLs."""
+    # Mock sitemap detection
+    mock_services['crawling'].is_txt.return_value = False
+    mock_services['crawling'].is_sitemap.return_value = True
+    mock_services['crawling'].parse_sitemap.return_value = []  # No URLs found
+    
+    result = await smart_crawl_url(mock_context, "https://example.com/sitemap.xml")
+    result_data = json.loads(result)
+    
+    assert result_data["success"] is False
+    assert "No content was successfully crawled" in result_data["error"]
+    assert result_data["crawl_type"] == "sitemap"
+    
+    # Verify sitemap was parsed but crawl_batch was not called
+    mock_services['crawling'].parse_sitemap.assert_called_once()
+    mock_services['crawling'].crawl_batch.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_sitemap_crawl_batch_failure(mock_context, mock_services):
+    """Test handling when crawl_batch returns empty results for sitemap."""
+    # Mock sitemap detection
+    mock_services['crawling'].is_txt.return_value = False
+    mock_services['crawling'].is_sitemap.return_value = True
+    mock_services['crawling'].parse_sitemap.return_value = [
+        "https://example.com/page1",
+        "https://example.com/page2"
+    ]
+    mock_services['crawling'].crawl_batch.return_value = []  # All URLs failed
+    
+    result = await smart_crawl_url(mock_context, "https://example.com/sitemap.xml")
+    result_data = json.loads(result)
+    
+    assert result_data["success"] is False
+    assert "No content was successfully crawled" in result_data["error"]
+    assert result_data["crawl_type"] == "sitemap"
+    
+    # Verify crawl_batch was called with the parsed URLs
+    mock_services['crawling'].crawl_batch.assert_called_once_with(
+        ["https://example.com/page1", "https://example.com/page2"],
+        max_concurrent=10
+    )

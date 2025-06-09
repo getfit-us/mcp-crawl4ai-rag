@@ -258,18 +258,18 @@ class DatabaseService:
                 # Get document and code example counts
                 doc_count = self.client.table('crawled_pages')\
                     .select('*', count='exact')\
-                    .eq('source', data['source_id'])\
+                    .eq('source_id', data['source_id'])\
                     .execute()
                 
                 code_count = self.client.table('code_examples')\
                     .select('*', count='exact')\
-                    .eq('source', data['source_id'])\
+                    .eq('source_id', data['source_id'])\
                     .execute()
                 
                 # Get total chunks
                 chunk_result = self.client.table('crawled_pages')\
                     .select('chunk_number')\
-                    .eq('source', data['source_id'])\
+                    .eq('source_id', data['source_id'])\
                     .execute()
                 
                 total_chunks = len(chunk_result.data) if chunk_result.data else 0

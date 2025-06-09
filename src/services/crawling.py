@@ -106,6 +106,7 @@ class CrawlingService:
         Returns:
             List of dictionaries with URL and markdown content
         """
+        logger.info(f"Starting crawl_batch with {len(urls)} URLs")
         crawl_config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS, stream=False)
         dispatcher = MemoryAdaptiveDispatcher(
             memory_threshold_percent=70.0,
@@ -113,8 +114,24 @@ class CrawlingService:
             max_session_permit=max_concurrent
         )
 
-        results = await self.crawler.arun_many(urls=urls, config=crawl_config, dispatcher=dispatcher)
-        return [{'url': r.url, 'markdown': r.markdown} for r in results if r.success and r.markdown]
+        try:
+            results = await self.crawler.arun_many(urls=urls, config=crawl_config, dispatcher=dispatcher)
+            logger.info(f"arun_many returned {len(results)} results")
+            
+            successful_results = [{'url': r.url, 'markdown': r.markdown} for r in results if r.success and r.markdown]
+            logger.info(f"Filtered to {len(successful_results)} successful results")
+            
+            # Log some failures if any
+            failed_results = [r for r in results if not r.success or not r.markdown]
+            if failed_results:
+                logger.warning(f"{len(failed_results)} URLs failed to crawl")
+                for failed in failed_results[:5]:  # Log first 5 failures
+                    logger.warning(f"Failed: {failed.url} - Error: {getattr(failed, 'error_message', 'No markdown content')}")
+            
+            return successful_results
+        except Exception as e:
+            logger.error(f"Error in crawl_batch: {e}")
+            return []
     
     async def crawl_recursive_internal_links(
         self, 

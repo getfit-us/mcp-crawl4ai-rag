@@ -56,6 +56,18 @@ async def crawl_single_page(ctx: Context, url: str) -> str:
         # Extract source_id
         source_id = urlparse(url).netloc
         
+        # Update source info FIRST (before inserting documents)
+        total_word_count = len(markdown_content.split())
+        source_summary = await crawling_service.extract_source_summary(
+            source_id, markdown_content[:10000]
+        )
+        
+        await database_service.update_source_info(
+            source_id=source_id,
+            summary=source_summary,
+            word_count=total_word_count
+        )
+        
         # Chunk the content
         chunks = text_processor.smart_chunk_markdown(
             markdown_content, 
@@ -89,19 +101,16 @@ async def crawl_single_page(ctx: Context, url: str) -> str:
             
             # Extract metadata
             section_info = text_processor.extract_section_info(chunk)
+            # Add source to metadata to match original implementation
+            section_info["source"] = source_id
+            section_info["url"] = url
+            section_info["chunk_index"] = i
+            section_info["crawl_type"] = "single_page"
+            # Use current datetime instead of context.timestamp which doesn't exist
+            from datetime import datetime, timezone
+            section_info["crawl_time"] = datetime.now(timezone.utc).isoformat()
             metadatas.append(section_info)
         
-        # Update source info
-        total_word_count = sum(len(chunk.split()) for chunk in chunks)
-        source_summary = await crawling_service.extract_source_summary(
-            source_id, markdown_content[:10000]
-        )
-        
-        await database_service.update_source_info(
-            source_id=source_id,
-            summary=source_summary,
-            word_count=total_word_count
-        )
         
         # Add documents to database
         await database_service.add_documents(

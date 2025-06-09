@@ -62,11 +62,7 @@ class SearchService:
         
         # Add source filter if provided
         if source_id:
-            # Add source to filter metadata
-            if not filter_metadata:
-                filter_metadata = {}
-            filter_metadata['source'] = source_id
-            params['filter'] = filter_metadata
+            params['source_filter'] = source_id
         
         # Execute the search
         try:
@@ -167,16 +163,11 @@ class SearchService:
             SearchResponse object with results
         """
         try:
-            # Build metadata filter if source is specified
-            filter_metadata = None
-            if request.source:
-                filter_metadata = {'source': request.source}
-            
             # Search documents
             results = await self.search_documents(
                 query=request.query,
                 match_count=request.num_results,
-                filter_metadata=filter_metadata,
+                filter_metadata=None,  # Source filtering is handled by source_id parameter
                 source_id=request.source,
                 use_hybrid_search=(search_type == SearchType.HYBRID)
             )

@@ -177,3 +177,46 @@ async def test_crawl_single_page_exception_handling(mock_context, mock_services)
     assert result_data["success"] is False
     assert "Network error" in result_data["error"]
     assert result_data["url"] == "https://example.com"
+
+
+@pytest.mark.asyncio
+async def test_metadata_timestamp_format(mock_context, mock_services):
+    """Test that metadata contains properly formatted timestamp."""
+    # Mock successful crawl
+    mock_services['crawling'].crawl_batch.return_value = [
+        {"url": "https://example.com", "markdown": "Test content"}
+    ]
+    
+    # Track the metadata passed to add_documents
+    captured_metadata = []
+    async def capture_add_documents(**kwargs):
+        captured_metadata.extend(kwargs.get('metadatas', []))
+        return {"success": True, "count": len(kwargs.get('contents', []))}
+    
+    mock_services['database'].add_documents = capture_add_documents
+    
+    result = await crawl_single_page(mock_context, "https://example.com")
+    result_data = json.loads(result)
+    
+    assert result_data["success"] is True
+    assert len(captured_metadata) > 0
+    
+    # Check each metadata entry
+    for metadata in captured_metadata:
+        # Verify required fields exist
+        assert "crawl_time" in metadata
+        assert "crawl_type" in metadata
+        assert metadata["crawl_type"] == "single_page"
+        assert "source" in metadata
+        assert "url" in metadata
+        assert "chunk_index" in metadata
+        
+        # Verify timestamp format (ISO format with timezone)
+        crawl_time = metadata["crawl_time"]
+        assert isinstance(crawl_time, str)
+        assert "T" in crawl_time  # ISO format separator
+        assert "+" in crawl_time or "Z" in crawl_time  # Timezone indicator
+        
+        # Verify it can be parsed as a datetime
+        from datetime import datetime
+        datetime.fromisoformat(crawl_time.replace('Z', '+00:00'))
