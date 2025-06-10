@@ -26,36 +26,37 @@ async def smart_crawl_url(
     chunk_size: int = 5000
 ) -> str:
     """
-    Intelligently crawl a URL based on its type (sitemap, txt file, or webpage).
+    Intelligently crawl websites based on URL type and store content in PostgreSQL.
     
-    This tool automatically detects the URL type and applies the appropriate crawling strategy:
-    - For sitemaps: Crawls all URLs listed in the sitemap
-    - For txt files: Crawls the file as markdown
-    - For regular pages: Recursively crawls internal links up to max_depth
+    This tool can handle:
+    - Single web pages (crawled with depth)
+    - Sitemaps (XML files containing multiple URLs)
+    - Text files with URLs (like llms-full.txt)
+    - Automatic detection and appropriate crawling strategy
     
-    The crawled content is automatically chunked and stored in Supabase with embeddings.
+    The crawled content is automatically chunked and stored in PostgreSQL with embeddings.
     
     Args:
         ctx: The MCP server provided context
-        url: The URL to crawl (can be a sitemap, txt file, or regular webpage)
-        max_depth: Maximum recursion depth for regular URLs (default: 3)
-        max_concurrent: Maximum concurrent browser sessions (default: 10)
+        url: Starting URL to crawl (can be a webpage, sitemap, or text file)
+        max_depth: Maximum crawling depth for recursive crawling (1-10)
+        max_concurrent: Maximum number of concurrent requests (1-50)
         chunk_size: Maximum size of each content chunk (default: 5000)
     
     Returns:
-        Summary of the crawling operation
+        Summary of the crawling operation including pages crawled and chunks stored
     """
     try:
         # Get context and services
         context: CrawlContext = ctx.request_context.lifespan_context
         crawler = context.crawler
-        supabase_client = context.supabase_client
+        postgres_pool = context.supabase_client  # Field name kept for compatibility
         settings = context.settings
         
         # Initialize services
         embedding_service = EmbeddingService(settings)
-        database_service = DatabaseService(supabase_client, settings)
-        crawling_service = CrawlingService(crawler, settings, embedding_service)
+        database_service = DatabaseService(postgres_pool, settings)
+        crawling_service = CrawlingService(context.crawler, database_service, settings)
         text_processor = TextProcessor(settings, embedding_service)
         
         # Override chunk size if specified

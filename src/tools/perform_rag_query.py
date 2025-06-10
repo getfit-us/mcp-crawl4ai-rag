@@ -35,13 +35,13 @@ async def perform_rag_query(
         Search results with relevant content chunks
     """
     try:
-        # Get context
+        # Get context and services
         context: CrawlContext = ctx.request_context.lifespan_context
-        supabase_client = context.supabase_client
+        postgres_pool = context.supabase_client  # Field name kept for compatibility
         settings = context.settings
         
-        # Initialize services
-        search_service = SearchService(supabase_client, settings)
+        # Initialize search service
+        search_service = SearchService(postgres_pool, settings)
         
         # Create search request
         search_request = SearchRequest(

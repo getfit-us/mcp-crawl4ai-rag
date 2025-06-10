@@ -24,13 +24,13 @@ async def get_available_sources(ctx: Context) -> str:
         List of available sources with their metadata
     """
     try:
-        # Get context
+        # Get context and initialize service
         context: CrawlContext = ctx.request_context.lifespan_context
-        supabase_client = context.supabase_client
+        postgres_pool = context.supabase_client  # Field name kept for compatibility
         settings = context.settings
         
         # Initialize database service
-        database_service = DatabaseService(supabase_client, settings)
+        database_service = DatabaseService(postgres_pool, settings)
         
         # Get available sources
         sources = await database_service.get_available_sources()

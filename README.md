@@ -4,7 +4,7 @@
   <em>Web Crawling and RAG Capabilities for AI Agents and AI Coding Assistants</em>
 </p>
 
-A powerful implementation of the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) integrated with [Crawl4AI](https://crawl4ai.com) and [Supabase](https://supabase.com/) for providing AI agents and AI coding assistants with advanced web crawling and RAG capabilities.
+A powerful implementation of the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) integrated with [Crawl4AI](https://crawl4ai.com) and [PostgreSQL with pgvector](https://github.com/pgvector/pgvector) for providing AI agents and AI coding assistants with advanced web crawling and RAG capabilities.
 
 With this MCP server, you can <b>scrape anything</b> and then <b>use that knowledge anywhere</b> for RAG.
 
@@ -12,7 +12,7 @@ The primary goal is to bring this MCP server into [Archon](https://github.com/co
 
 ## Overview
 
-This MCP server provides tools that enable AI agents to crawl websites, store content in a vector database (Supabase), and perform RAG over the crawled content. It follows the best practices for building MCP servers based on the [Mem0 MCP server template](https://github.com/coleam00/mcp-mem0/) I provided on my channel previously.
+This MCP server provides tools that enable AI agents to crawl websites, store content in a vector database (PostgreSQL with pgvector), and perform RAG over the crawled content. It follows the best practices for building MCP servers based on the [Mem0 MCP server template](https://github.com/coleam00/mcp-mem0/) I provided on my channel previously.
 
 The server includes several advanced RAG strategies that can be enabled to enhance retrieval quality:
 - **Contextual Embeddings** for enriched semantic understanding
@@ -64,7 +64,7 @@ The server provides essential web crawling and search tools:
 
 - [Docker/Docker Desktop](https://www.docker.com/products/docker-desktop/) if running the MCP server as a container (recommended)
 - [Python 3.12+](https://www.python.org/downloads/) if running the MCP server directly through uv
-- [Supabase](https://supabase.com/) (database for RAG)
+- [PostgreSQL](https://www.postgresql.org/) database with [pgvector extension](https://github.com/pgvector/pgvector) (local or remote)
 - [OpenAI API key](https://platform.openai.com/api-keys) (for generating embeddings)
 
 ## Installation
@@ -118,13 +118,22 @@ The server provides essential web crawling and search tools:
 
 ## Database Setup
 
-Before running the server, you need to set up the database with the pgvector extension:
+Before running the server, you need to set up a PostgreSQL database with the pgvector extension:
 
-1. Go to the SQL Editor in your Supabase dashboard (create a new project first if necessary)
+1. **Install PostgreSQL and pgvector**:
+   - For local setup, install PostgreSQL and the pgvector extension
+   - For cloud setup, use a service that supports pgvector (e.g., Supabase, Neon, or AWS RDS with pgvector)
 
-2. Create a new query and paste the contents of `crawled_pages.sql`
+2. **Create the database and enable pgvector**:
+   ```sql
+   CREATE DATABASE crawl4ai_rag;
+   \c crawl4ai_rag;
+   CREATE EXTENSION IF NOT EXISTS vector;
+   ```
 
-3. Run the query to create the necessary tables and functions
+3. **Create the database schema**:
+   - Connect to your PostgreSQL database
+   - Run the SQL commands from `crawled_pages.sql` to create the necessary tables and functions
 
 ## Configuration
 
@@ -140,7 +149,7 @@ TRANSPORT=sse
 OPENAI_API_KEY=your_openai_api_key
 
 # LLM for summaries and contextual embeddings
-MODEL_CHOICE=gpt-4.1-nano
+MODEL_CHOICE=gpt-4o-mini
 
 # RAG Strategies (set to "true" or "false", default to "false")
 USE_CONTEXTUAL_EMBEDDINGS=false
@@ -148,9 +157,13 @@ USE_HYBRID_SEARCH=false
 USE_AGENTIC_RAG=false
 USE_RERANKING=false
 
-# Supabase Configuration
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_SERVICE_KEY=your_supabase_service_key
+# PostgreSQL Configuration
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=crawl4ai_rag
+POSTGRES_USER=your_postgres_user
+POSTGRES_PASSWORD=your_postgres_password
+POSTGRES_SSLMODE=prefer
 ```
 
 ### RAG Strategy Options
@@ -273,8 +286,12 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
       "env": {
         "TRANSPORT": "stdio",
         "OPENAI_API_KEY": "your_openai_api_key",
-        "SUPABASE_URL": "your_supabase_url",
-        "SUPABASE_SERVICE_KEY": "your_supabase_service_key"
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DB": "crawl4ai_rag",
+        "POSTGRES_USER": "your_postgres_user",
+        "POSTGRES_PASSWORD": "your_postgres_password",
+        "POSTGRES_SSLMODE": "prefer"
       }
     }
   }
@@ -291,19 +308,79 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
       "args": ["run", "--rm", "-i", 
                "-e", "TRANSPORT", 
                "-e", "OPENAI_API_KEY", 
-               "-e", "SUPABASE_URL", 
-               "-e", "SUPABASE_SERVICE_KEY", 
-               "mcp/crawl4ai"],
+               "-e", "POSTGRES_HOST", 
+               "-e", "POSTGRES_PORT", 
+               "-e", "POSTGRES_DB", 
+               "-e", "POSTGRES_USER", 
+               "-e", "POSTGRES_PASSWORD", 
+               "-e", "POSTGRES_SSLMODE", 
+               "mcp/crawl4ai-rag"],
       "env": {
         "TRANSPORT": "stdio",
         "OPENAI_API_KEY": "your_openai_api_key",
-        "SUPABASE_URL": "your_supabase_url",
-        "SUPABASE_SERVICE_KEY": "your_supabase_service_key"
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DB": "crawl4ai_rag",
+        "POSTGRES_USER": "your_postgres_user",
+        "POSTGRES_PASSWORD": "your_postgres_password",
+        "POSTGRES_SSLMODE": "prefer"
       }
     }
   }
 }
 ```
+
+## PostgreSQL Setup Examples
+
+### Local PostgreSQL Setup
+
+1. **Install PostgreSQL and pgvector**:
+   ```bash
+   # On macOS with Homebrew
+   brew install postgresql pgvector
+   
+   # On Ubuntu/Debian
+   sudo apt-get install postgresql postgresql-contrib
+   # Install pgvector from source or package manager
+   
+   # On Docker
+   docker run --name postgres-pgvector \
+     -e POSTGRES_PASSWORD=mypassword \
+     -e POSTGRES_DB=crawl4ai_rag \
+     -p 5432:5432 \
+     -d pgvector/pgvector:pg16
+   ```
+
+2. **Set up the database**:
+   ```bash
+   # Connect to PostgreSQL
+   psql -h localhost -U postgres
+   
+   # Run the setup script
+   \i setup_postgres.sql
+   ```
+
+3. **Create application user** (optional but recommended):
+   ```sql
+   CREATE USER crawl4ai_user WITH PASSWORD 'secure_password';
+   GRANT ALL PRIVILEGES ON DATABASE crawl4ai_rag TO crawl4ai_user;
+   \c crawl4ai_rag;
+   GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO crawl4ai_user;
+   GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO crawl4ai_user;
+   GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO crawl4ai_user;
+   ```
+
+### Cloud PostgreSQL Setup
+
+You can use any cloud PostgreSQL service that supports pgvector:
+
+- **Supabase**: Has pgvector enabled by default
+- **Neon**: Supports pgvector extension
+- **AWS RDS**: Supports pgvector (PostgreSQL 15+)
+- **Google Cloud SQL**: Supports pgvector
+- **Azure Database for PostgreSQL**: Supports pgvector
+
+Simply run the `setup_postgres.sql` script on your cloud database after enabling the pgvector extension.
 
 ## Building Your Own Server
 
@@ -313,3 +390,13 @@ This implementation provides a foundation for building more complex MCP servers 
 2. Create your own lifespan function to add your own dependencies
 3. Modify the `utils.py` file for any helper functions you need
 4. Extend the crawling capabilities by adding more specialized crawlers
+
+## Migration from Supabase
+
+If you're migrating from the original Supabase version:
+
+1. Export your data from Supabase
+2. Set up PostgreSQL with pgvector using the instructions above
+3. Import your data to the new PostgreSQL database
+4. Update your configuration to use PostgreSQL connection settings
+5. The MCP tools and API remain the same

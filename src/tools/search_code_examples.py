@@ -37,19 +37,19 @@ async def search_code_examples(
     try:
         # Get context
         context: CrawlContext = ctx.request_context.lifespan_context
-        supabase_client = context.supabase_client
+        postgres_pool = context.supabase_client  # Field name kept for compatibility
         settings = context.settings
         
-        # Check if code extraction is enabled
+        # Check if agentic RAG is enabled
         if not settings.use_agentic_rag:
             return json.dumps({
                 "success": False,
-                "error": "Code example extraction is not enabled. Set USE_AGENTIC_RAG=true to enable it.",
+                "error": "Code example search is not enabled. Set USE_AGENTIC_RAG=true to enable this feature.",
                 "results": []
             })
         
-        # Initialize services
-        search_service = SearchService(supabase_client, settings)
+        # Initialize search service
+        search_service = SearchService(postgres_pool, settings)
         
         # Search for code examples
         results = await search_service.search_code_examples(

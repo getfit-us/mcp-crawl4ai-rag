@@ -4,6 +4,7 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import asyncpg
 from crawl4ai import AsyncWebCrawler, BrowserConfig
 from mcp.server.fastmcp import FastMCP
 from sentence_transformers import CrossEncoder
@@ -14,17 +15,20 @@ from crawl4ai_mcp.models import CrawlContext
 logger = logging.getLogger(__name__)
 
 
-def get_supabase_client():
+async def get_postgres_pool() -> asyncpg.Pool:
     """
-    Get Supabase client with configuration from settings.
+    Get PostgreSQL connection pool with configuration from settings.
     
     Returns:
-        Client: Configured Supabase client instance
+        asyncpg.Pool: Configured PostgreSQL connection pool
     """
-    from supabase import create_client
-    
     settings = get_settings()
-    return create_client(settings.supabase_url, settings.supabase_service_key)
+    return await asyncpg.create_pool(
+        settings.postgres_dsn,
+        min_size=1,
+        max_size=10,
+        command_timeout=60
+    )
 
 
 @asynccontextmanager
@@ -36,7 +40,7 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[CrawlContext]:
         server: The FastMCP server instance
         
     Yields:
-        CrawlContext: The context containing the Crawl4AI crawler and Supabase client
+        CrawlContext: The context containing the Crawl4AI crawler and PostgreSQL pool
     """
     settings = get_settings()
     
@@ -50,8 +54,8 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[CrawlContext]:
     crawler = AsyncWebCrawler(config=browser_config)
     await crawler.__aenter__()
     
-    # Initialize Supabase client
-    supabase_client = get_supabase_client()
+    # Initialize PostgreSQL connection pool
+    postgres_pool = await get_postgres_pool()
     
     # Initialize cross-encoder model for reranking if enabled
     reranking_model = None
@@ -65,7 +69,7 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[CrawlContext]:
     # Create context
     context = CrawlContext(
         crawler=crawler,
-        supabase_client=supabase_client,
+        supabase_client=postgres_pool,  # Reusing the field name for compatibility
         reranking_model=reranking_model,
         settings=settings
     )
@@ -75,6 +79,7 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[CrawlContext]:
     finally:
         # Cleanup
         await crawler.__aexit__(None, None, None)
+        await postgres_pool.close()
 
 
 # Initialize FastMCP server

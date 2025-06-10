@@ -1,8 +1,10 @@
 """Search service for document and code example retrieval."""
 
+import json
 import logging
 from typing import Any, Dict, List, Optional
 
+import asyncpg
 from crawl4ai_mcp.config import get_settings
 from crawl4ai_mcp.models import SearchRequest, SearchResult, SearchResponse, SearchType
 from crawl4ai_mcp.services.embeddings import EmbeddingService
@@ -13,16 +15,16 @@ logger = logging.getLogger(__name__)
 class SearchService:
     """Service for searching documents and code examples."""
     
-    def __init__(self, client: Any, settings: Optional[Any] = None, embedding_service: Optional[EmbeddingService] = None):
+    def __init__(self, pool: asyncpg.Pool, settings: Optional[Any] = None, embedding_service: Optional[EmbeddingService] = None):
         """
         Initialize search service.
         
         Args:
-            client: Supabase client instance
+            pool: AsyncPG connection pool
             settings: Application settings (optional)
             embedding_service: Embedding service instance (optional)
         """
-        self.client = client
+        self.pool = pool
         self.settings = settings or get_settings()
         self.embedding_service = embedding_service or EmbeddingService(self.settings)
     
@@ -54,41 +56,34 @@ class SearchService:
             logger.error(f"Error creating query embedding: {e}")
             return []
         
-        # Build RPC parameters
-        params = {
-            'query_embedding': query_embedding,
-            'match_count': match_count
-        }
-        
-        # Add metadata filter if provided
-        if filter_metadata:
-            params['filter'] = filter_metadata
-        
-        # Add source filter if provided
-        if source_id:
-            params['source_filter'] = source_id
-        
-        # Execute the search
-        try:
-            result = self.client.rpc('match_crawled_pages', params).execute()
-            
-            # Convert results to SearchResult objects
-            search_results = []
-            for doc in result.data:
-                search_results.append(SearchResult(
-                    content=doc.get('content', ''),
-                    url=doc.get('url', ''),
-                    source=doc.get('source_id', ''),  # Fixed: DB returns source_id
-                    chunk_number=doc.get('chunk_number', 0),
-                    similarity_score=doc.get('similarity', 0.0),
-                    metadata=doc.get('metadata', {})
-                ))
-            
-            return search_results
-            
-        except Exception as e:
-            logger.error(f"Error searching documents: {e}")
-            return []
+        async with self.pool.acquire() as conn:
+            try:
+                # Call the PostgreSQL function
+                rows = await conn.fetch(
+                    "SELECT * FROM match_crawled_pages($1, $2, $3, $4)",
+                    query_embedding,
+                    match_count,
+                    json.dumps(filter_metadata) if filter_metadata else '{}',
+                    source_id
+                )
+                
+                # Convert results to SearchResult objects
+                search_results = []
+                for row in rows:
+                    search_results.append(SearchResult(
+                        content=row.get('content', ''),
+                        url=row.get('url', ''),
+                        source=row.get('source_id', ''),
+                        chunk_number=row.get('chunk_number', 0),
+                        similarity_score=row.get('similarity', 0.0),
+                        metadata=row.get('metadata', {})
+                    ))
+                
+                return search_results
+                
+            except Exception as e:
+                logger.error(f"Error searching documents: {e}")
+                return []
     
     async def search_code_examples(
         self,
@@ -124,34 +119,29 @@ class SearchService:
             logger.error(f"Error creating code example query embedding: {e}")
             return []
         
-        # Build RPC parameters
-        params = {
-            'query_embedding': query_embedding,
-            'match_count': match_count
-        }
-        
-        # Add metadata filter if provided
-        if filter_metadata:
-            params['filter'] = filter_metadata
-        
-        # Add source filter if provided
-        if source_id:
-            params['source_filter'] = source_id
-        
         # Add language filter if provided
         if language:
             if not filter_metadata:
                 filter_metadata = {}
             filter_metadata['language'] = language
-            params['filter'] = filter_metadata
         
-        # Execute the search
-        try:
-            result = self.client.rpc('match_code_examples', params).execute()
-            return result.data
-        except Exception as e:
-            logger.error(f"Error searching code examples: {e}")
-            return []
+        async with self.pool.acquire() as conn:
+            try:
+                # Call the PostgreSQL function
+                rows = await conn.fetch(
+                    "SELECT * FROM match_code_examples($1, $2, $3, $4)",
+                    query_embedding,
+                    match_count,
+                    json.dumps(filter_metadata) if filter_metadata else '{}',
+                    source_id
+                )
+                
+                # Convert rows to dictionaries
+                return [dict(row) for row in rows]
+                
+            except Exception as e:
+                logger.error(f"Error searching code examples: {e}")
+                return []
     
     async def perform_search(
         self,
@@ -199,41 +189,40 @@ class SearchService:
                 # Convert code examples to SearchResult objects
                 for code_ex in code_data:
                     code_results.append(SearchResult(
-                        content=code_ex.get('content', ''),  # Fixed: DB returns content not code
+                        content=code_ex.get('content', ''),
                         url=code_ex.get('url', ''),
-                        source=code_ex.get('source_id', ''),  # Fixed: DB returns source_id
+                        source=code_ex.get('source_id', ''),
                         chunk_number=code_ex.get('chunk_number', 0),
                         similarity_score=code_ex.get('similarity', 0.0),
-                        metadata={
-                            'type': 'code_example',
-                            'language': code_ex.get('metadata', {}).get('language', 'unknown'),  # Language is in metadata
-                            'summary': code_ex.get('summary', ''),
-                            **code_ex.get('metadata', {})
-                        }
+                        metadata=code_ex.get('metadata', {})
                     ))
             
             # Combine results
             all_results = results + code_results
             
-            # Sort by similarity score
-            all_results.sort(key=lambda x: x.similarity_score, reverse=True)
-            
-            # Limit to requested number
-            all_results = all_results[:request.num_results]
+            # Apply reranking if enabled
+            if self.settings.use_reranking and hasattr(self, 'reranking_model') and self.reranking_model:
+                all_results = await self.rerank_results(
+                    query=request.query,
+                    results=all_results,
+                    reranking_model=self.reranking_model,
+                    threshold=request.rerank_threshold or self.settings.default_rerank_threshold
+                )
             
             return SearchResponse(
-                success=True,
+                query=request.query,
                 results=all_results,
                 total_results=len(all_results),
-                search_type=search_type
+                search_type=search_type.value
             )
             
         except Exception as e:
+            logger.error(f"Error performing search: {e}")
             return SearchResponse(
-                success=False,
+                query=request.query,
                 results=[],
                 total_results=0,
-                search_type=search_type,
+                search_type=search_type.value,
                 error=str(e)
             )
     

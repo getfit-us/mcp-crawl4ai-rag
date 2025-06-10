@@ -143,7 +143,7 @@ class CrawlContext(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     
     crawler: Any  # AsyncWebCrawler - using Any to avoid circular imports
-    supabase_client: Any  # Client - using Any to avoid circular imports
+    supabase_client: Any  # PostgreSQL Pool (asyncpg.Pool) - keeping field name for compatibility
     reranking_model: Optional[Any] = None  # CrossEncoder
     settings: Optional[Any] = None  # Settings - using Any to avoid circular imports
 

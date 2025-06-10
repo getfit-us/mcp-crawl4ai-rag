@@ -17,9 +17,13 @@ class Settings(BaseSettings):
     openai_api_key: str
     model_choice: str = "gpt-4o-mini"
     
-    # Supabase Configuration - REQUIRED
-    supabase_url: str
-    supabase_service_key: str
+    # PostgreSQL Configuration - REQUIRED
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
+    postgres_db: str = "crawl4ai_rag"
+    postgres_user: str
+    postgres_password: str
+    postgres_sslmode: str = "prefer"
     
     # Feature Flags
     use_contextual_embeddings: bool = False
@@ -54,10 +58,19 @@ class Settings(BaseSettings):
         """Validate that all required fields are set."""
         if not self.openai_api_key:
             raise ValueError("OPENAI_API_KEY is required")
-        if not self.supabase_url:
-            raise ValueError("SUPABASE_URL is required")
-        if not self.supabase_service_key:
-            raise ValueError("SUPABASE_SERVICE_KEY is required")
+        if not self.postgres_user:
+            raise ValueError("POSTGRES_USER is required")
+        if not self.postgres_password:
+            raise ValueError("POSTGRES_PASSWORD is required")
+    
+    @property
+    def postgres_dsn(self) -> str:
+        """Get PostgreSQL connection string."""
+        return (
+            f"postgresql://{self.postgres_user}:{self.postgres_password}@"
+            f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+            f"?sslmode={self.postgres_sslmode}"
+        )
 
 
 # Global settings instance

@@ -1,8 +1,10 @@
-"""Database service for Supabase operations."""
+"""Database service for PostgreSQL operations with pgvector."""
 
+import json
 import logging
 from typing import Any, Dict, List, Optional
 
+import asyncpg
 from crawl4ai_mcp.config import get_settings
 from crawl4ai_mcp.models import SourceInfo
 
@@ -10,17 +12,17 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseService:
-    """Service for managing database operations with Supabase."""
+    """Service for managing database operations with PostgreSQL."""
     
-    def __init__(self, client: Any, settings: Optional[Any] = None):
+    def __init__(self, pool: asyncpg.Pool, settings: Optional[Any] = None):
         """
         Initialize database service.
         
         Args:
-            client: Supabase client instance
+            pool: AsyncPG connection pool
             settings: Application settings (optional)
         """
-        self.client = client
+        self.pool = pool
         self.settings = settings or get_settings()
     
     async def add_documents(
@@ -34,7 +36,7 @@ class DatabaseService:
         batch_size: int = 20
     ) -> Dict[str, Any]:
         """
-        Add documents to the Supabase crawled_pages table in batches.
+        Add documents to the PostgreSQL crawled_pages table in batches.
         
         Args:
             urls: List of URLs
@@ -51,56 +53,60 @@ class DatabaseService:
         # Get unique URLs to delete existing records
         unique_urls = list(set(urls))
         
-        # Delete existing records for these URLs in a single operation
-        try:
-            if unique_urls:
-                # Use the .in_() filter to delete all records with matching URLs
-                self.client.table("crawled_pages").delete().in_("url", unique_urls).execute()
-        except Exception as e:
-            return {
-                "success": False,
-                "error": f"Failed to delete existing records: {str(e)}",
-                "count": 0
-            }
-        
-        # Process documents in batches
-        total_documents = len(urls)
-        documents_added = 0
-        
-        for i in range(0, total_documents, batch_size):
-            batch_urls = urls[i:i + batch_size]
-            batch_chunk_numbers = chunk_numbers[i:i + batch_size]
-            batch_contents = contents[i:i + batch_size]
-            batch_embeddings = embeddings[i:i + batch_size]
-            batch_metadatas = metadatas[i:i + batch_size]
-            
-            # Extract source domains
-            from urllib.parse import urlparse
-            batch_sources = [urlparse(url).netloc for url in batch_urls]
-            
-            # Prepare batch data for insertion
-            batch_data = []
-            for j, (url, chunk_num, content, embedding, metadata, source) in enumerate(zip(
-                batch_urls, batch_chunk_numbers, batch_contents, 
-                batch_embeddings, batch_metadatas, batch_sources
-            )):
-                batch_data.append({
-                    'url': url,
-                    'chunk_number': chunk_num,
-                    'content': content,
-                    'embedding': embedding,
-                    'metadata': metadata,
-                    'source_id': source  # Fixed: table column is 'source_id' not 'source'
-                })
-            
-            # Insert batch
+        async with self.pool.acquire() as conn:
+            # Delete existing records for these URLs
             try:
-                if batch_data:
-                    self.client.table('crawled_pages').insert(batch_data).execute()
-                    documents_added += len(batch_data)
+                if unique_urls:
+                    await conn.execute(
+                        "DELETE FROM crawled_pages WHERE url = ANY($1)",
+                        unique_urls
+                    )
             except Exception as e:
-                logger.error(f"Error inserting batch {i//batch_size + 1}: {e}")
-                continue
+                return {
+                    "success": False,
+                    "error": f"Failed to delete existing records: {str(e)}",
+                    "count": 0
+                }
+            
+            # Process documents in batches
+            total_documents = len(urls)
+            documents_added = 0
+            
+            for i in range(0, total_documents, batch_size):
+                batch_urls = urls[i:i + batch_size]
+                batch_chunk_numbers = chunk_numbers[i:i + batch_size]
+                batch_contents = contents[i:i + batch_size]
+                batch_embeddings = embeddings[i:i + batch_size]
+                batch_metadatas = metadatas[i:i + batch_size]
+                
+                # Extract source domains
+                from urllib.parse import urlparse
+                batch_sources = [urlparse(url).netloc for url in batch_urls]
+                
+                # Prepare batch data for insertion
+                batch_data = []
+                for j, (url, chunk_num, content, embedding, metadata, source) in enumerate(zip(
+                    batch_urls, batch_chunk_numbers, batch_contents, 
+                    batch_embeddings, batch_metadatas, batch_sources
+                )):
+                    batch_data.append((
+                        url, chunk_num, content, json.dumps(metadata), source, embedding
+                    ))
+                
+                # Insert batch
+                try:
+                    if batch_data:
+                        await conn.executemany(
+                            """
+                            INSERT INTO crawled_pages (url, chunk_number, content, metadata, source_id, embedding)
+                            VALUES ($1, $2, $3, $4, $5, $6)
+                            """,
+                            batch_data
+                        )
+                        documents_added += len(batch_data)
+                except Exception as e:
+                    logger.error(f"Error inserting batch {i//batch_size + 1}: {e}")
+                    continue
         
         return {
             "success": True,
@@ -119,7 +125,7 @@ class DatabaseService:
         batch_size: int = 20
     ) -> Dict[str, Any]:
         """
-        Add code examples to the Supabase code_examples table in batches.
+        Add code examples to the PostgreSQL code_examples table in batches.
         
         Args:
             urls: List of URLs
@@ -135,65 +141,66 @@ class DatabaseService:
         """
         if not urls:
             return {"success": True, "count": 0}
-            
-        # Delete existing records for these URLs
-        unique_urls = list(set(urls))
-        for url in unique_urls:
-            try:
-                self.client.table('code_examples').delete().eq('url', url).execute()
-            except Exception as e:
-                logger.error(f"Error deleting existing code examples for {url}: {e}")
         
-        # Process code examples in batches
-        total_examples = len(urls)
-        examples_added = 0
-        
-        for i in range(0, total_examples, batch_size):
-            batch_urls = urls[i:i + batch_size]
-            batch_chunk_numbers = chunk_numbers[i:i + batch_size]
-            batch_code_examples = code_examples[i:i + batch_size]
-            batch_summaries = summaries[i:i + batch_size]
-            batch_embeddings = embeddings[i:i + batch_size]
-            batch_metadatas = metadatas[i:i + batch_size]
+        async with self.pool.acquire() as conn:
+            # Delete existing records for these URLs
+            unique_urls = list(set(urls))
+            for url in unique_urls:
+                try:
+                    await conn.execute("DELETE FROM code_examples WHERE url = $1", url)
+                except Exception as e:
+                    logger.error(f"Error deleting existing code examples for {url}: {e}")
             
-            # Extract source domains
-            from urllib.parse import urlparse
-            batch_sources = [urlparse(url).netloc for url in batch_urls]
+            # Process code examples in batches
+            total_examples = len(urls)
+            examples_added = 0
             
-            # Prepare batch data
-            batch_data = []
-            for url, chunk_num, code, summary, embedding, metadata, source in zip(
-                batch_urls, batch_chunk_numbers, batch_code_examples,
-                batch_summaries, batch_embeddings, batch_metadatas, batch_sources
-            ):
-                # Extract language from code block if available
-                language = "unknown"
-                if code.startswith("```"):
-                    first_line = code.split('\n')[0]
-                    if len(first_line) > 3:
-                        language = first_line[3:].strip()
+            for i in range(0, total_examples, batch_size):
+                batch_urls = urls[i:i + batch_size]
+                batch_chunk_numbers = chunk_numbers[i:i + batch_size]
+                batch_code_examples = code_examples[i:i + batch_size]
+                batch_summaries = summaries[i:i + batch_size]
+                batch_embeddings = embeddings[i:i + batch_size]
+                batch_metadatas = metadatas[i:i + batch_size]
                 
-                # Add language to metadata
-                metadata['language'] = language
+                # Extract source domains
+                from urllib.parse import urlparse
+                batch_sources = [urlparse(url).netloc for url in batch_urls]
                 
-                batch_data.append({
-                    'url': url,
-                    'chunk_number': chunk_num,
-                    'content': code,  # Fixed: table column is 'content' not 'code'
-                    'summary': summary,
-                    'embedding': embedding,
-                    'metadata': metadata,
-                    'source_id': source  # Fixed: table column is 'source_id' not 'source'
-                })
-            
-            # Insert batch
-            try:
-                if batch_data:
-                    self.client.table('code_examples').insert(batch_data).execute()
-                    examples_added += len(batch_data)
-            except Exception as e:
-                logger.error(f"Error inserting code examples batch {i//batch_size + 1}: {e}")
-                continue
+                # Prepare batch data
+                batch_data = []
+                for url, chunk_num, code, summary, embedding, metadata, source in zip(
+                    batch_urls, batch_chunk_numbers, batch_code_examples,
+                    batch_summaries, batch_embeddings, batch_metadatas, batch_sources
+                ):
+                    # Extract language from code block if available
+                    language = "unknown"
+                    if code.startswith("```"):
+                        first_line = code.split('\n')[0]
+                        if len(first_line) > 3:
+                            language = first_line[3:].strip()
+                    
+                    # Add language to metadata
+                    metadata['language'] = language
+                    
+                    batch_data.append((
+                        url, chunk_num, code, summary, json.dumps(metadata), source, embedding
+                    ))
+                
+                # Insert batch
+                try:
+                    if batch_data:
+                        await conn.executemany(
+                            """
+                            INSERT INTO code_examples (url, chunk_number, content, summary, metadata, source_id, embedding)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7)
+                            """,
+                            batch_data
+                        )
+                        examples_added += len(batch_data)
+                except Exception as e:
+                    logger.error(f"Error inserting code examples batch {i//batch_size + 1}: {e}")
+                    continue
         
         return {
             "success": True,
@@ -218,30 +225,36 @@ class DatabaseService:
         Returns:
             Result dictionary with success status
         """
-        try:
-            # Try to update existing source
-            result = self.client.table('sources').update({
-                'summary': summary,
-                'total_word_count': word_count,
-                'updated_at': 'now()'
-            }).eq('source_id', source_id).execute()
-            
-            # If no rows were updated, insert new source
-            if not result.data:
-                self.client.table('sources').insert({
-                    'source_id': source_id,
-                    'summary': summary,
-                    'total_word_count': word_count
-                }).execute()
-                logger.info(f"Created new source: {source_id}")
-            else:
-                logger.info(f"Updated source: {source_id}")
+        async with self.pool.acquire() as conn:
+            try:
+                # Try to update existing source
+                result = await conn.execute(
+                    """
+                    UPDATE sources 
+                    SET summary = $2, total_word_count = $3, updated_at = CURRENT_TIMESTAMP
+                    WHERE source_id = $1
+                    """,
+                    source_id, summary, word_count
+                )
                 
-            return {"success": True, "source_id": source_id}
-            
-        except Exception as e:
-            logger.error(f"Error updating source info: {e}")
-            return {"success": False, "error": str(e)}
+                # If no rows were updated, insert new source
+                if result == "UPDATE 0":
+                    await conn.execute(
+                        """
+                        INSERT INTO sources (source_id, summary, total_word_count)
+                        VALUES ($1, $2, $3)
+                        """,
+                        source_id, summary, word_count
+                    )
+                    logger.info(f"Created new source: {source_id}")
+                else:
+                    logger.info(f"Updated source: {source_id}")
+                    
+                return {"success": True, "source_id": source_id}
+                
+            except Exception as e:
+                logger.error(f"Error updating source info: {e}")
+                return {"success": False, "error": str(e)}
     
     async def get_available_sources(self) -> List[SourceInfo]:
         """
@@ -250,45 +263,44 @@ class DatabaseService:
         Returns:
             List of SourceInfo objects
         """
-        try:
-            result = self.client.table('sources').select('*').execute()
-            sources = []
-            
-            for data in result.data:
-                # Get document and code example counts
-                doc_count = self.client.table('crawled_pages')\
-                    .select('*', count='exact')\
-                    .eq('source_id', data['source_id'])\
-                    .execute()
+        async with self.pool.acquire() as conn:
+            try:
+                # Get sources with document counts
+                sources_query = """
+                    SELECT 
+                        s.source_id,
+                        s.summary,
+                        s.total_word_count,
+                        s.updated_at,
+                        s.created_at,
+                        COUNT(DISTINCT cp.url) as doc_count,
+                        COUNT(cp.id) as chunk_count,
+                        COUNT(ce.id) as code_count
+                    FROM sources s
+                    LEFT JOIN crawled_pages cp ON s.source_id = cp.source_id
+                    LEFT JOIN code_examples ce ON s.source_id = ce.source_id
+                    GROUP BY s.source_id, s.summary, s.total_word_count, s.updated_at, s.created_at
+                """
                 
-                code_count = self.client.table('code_examples')\
-                    .select('*', count='exact')\
-                    .eq('source_id', data['source_id'])\
-                    .execute()
+                rows = await conn.fetch(sources_query)
+                sources = []
                 
-                # Get total chunks
-                chunk_result = self.client.table('crawled_pages')\
-                    .select('chunk_number')\
-                    .eq('source_id', data['source_id'])\
-                    .execute()
+                for row in rows:
+                    sources.append(SourceInfo(
+                        source=row['source_id'],
+                        total_documents=row['doc_count'] or 0,
+                        total_chunks=row['chunk_count'] or 0,
+                        total_code_examples=row['code_count'] or 0,
+                        word_count=row['total_word_count'] or 0,
+                        last_updated=row['updated_at'] or row['created_at'],
+                        summary=row['summary']
+                    ))
                 
-                total_chunks = len(chunk_result.data) if chunk_result.data else 0
+                return sources
                 
-                sources.append(SourceInfo(
-                    source=data['source_id'],
-                    total_documents=doc_count.count if hasattr(doc_count, 'count') else 0,
-                    total_chunks=total_chunks,
-                    total_code_examples=code_count.count if hasattr(code_count, 'count') else 0,
-                    word_count=data.get('total_word_count', 0),
-                    last_updated=data.get('updated_at', data.get('created_at')),
-                    summary=data.get('summary')
-                ))
-            
-            return sources
-            
-        except Exception as e:
-            logger.error(f"Error getting available sources: {e}")
-            return []
+            except Exception as e:
+                logger.error(f"Error getting available sources: {e}")
+                return []
     
     
     def _generate_contextual_content(
