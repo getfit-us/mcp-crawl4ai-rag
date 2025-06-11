@@ -12,6 +12,8 @@ def test_settings() -> Any:
     
     return SimpleNamespace(
         openai_api_key="test-api-key",
+        openai_base_url=None,
+        openai_organization=None,
         supabase_url="https://test.supabase.co",
         supabase_service_key="test-service-key",
         model_choice="gpt-4o-mini",
@@ -24,7 +26,11 @@ def test_settings() -> Any:
         transport="sse",
         embedding_model="text-embedding-3-small",
         embedding_dimensions=1536,
+        embedding_service_type="openai",
+        custom_embedding_url=None,
         cross_encoder_model="cross-encoder/ms-marco-MiniLM-L-6-v2",
+        custom_cross_encoder_url=None,
+        cross_encoder_model_local_path=None,
         default_max_depth=3,
         default_max_concurrent=10,
         default_chunk_size=5000,
@@ -32,6 +38,12 @@ def test_settings() -> Any:
         default_num_results=5,
         default_semantic_threshold=0.5,
         default_rerank_threshold=0.3,
+        postgres_host="localhost",
+        postgres_port=5432,
+        postgres_db="test_crawl4ai_rag",
+        postgres_user="test_user",
+        postgres_password="test_password",
+        postgres_sslmode="prefer",
     )
 
 

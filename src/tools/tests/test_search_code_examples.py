@@ -128,13 +128,7 @@ async def test_search_code_examples_with_reranking(mock_context, mock_search_ser
     # Enable reranking
     mock_context.request_context.lifespan_context.settings.use_reranking = True
     
-    with patch('crawl4ai_mcp.tools.search_code_examples.CrossEncoder') as MockCrossEncoder, \
-         patch('crawl4ai_mcp.tools.search_code_examples.Reranker') as MockReranker:
-        
-        # Mock cross encoder
-        mock_model = Mock()
-        MockCrossEncoder.return_value = mock_model
-        
+    with patch('crawl4ai_mcp.tools.search_code_examples.Reranker') as MockReranker:
         # Mock reranker - reorder results
         mock_reranker = Mock()
         reranked_results = [
@@ -181,6 +175,9 @@ async def test_search_code_examples_with_reranking(mock_context, mock_search_ser
         # Verify reranking was performed
         mock_reranker.rerank_results.assert_called_once()
         mock_reranker.filter_by_threshold.assert_called_once()
+        
+        # Verify Reranker was initialized with settings only
+        MockReranker.assert_called_once_with(settings=mock_context.request_context.lifespan_context.settings)
 
 
 @pytest.mark.asyncio

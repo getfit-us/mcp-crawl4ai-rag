@@ -96,8 +96,24 @@ def create_mcp_server() -> FastMCP:
     )
 
 
-# Global server instance
-mcp = create_mcp_server()
+# Global server instance - lazy initialization
+_mcp_server = None
+
+
+def get_mcp_server() -> FastMCP:
+    """Get or create the MCP server instance."""
+    global _mcp_server
+    if _mcp_server is None:
+        _mcp_server = create_mcp_server()
+    return _mcp_server
+
+
+# For backward compatibility, create a property-like access
+class MCPProxy:
+    def __getattr__(self, name):
+        return getattr(get_mcp_server(), name)
+
+mcp = MCPProxy()
 
 
 async def run_server() -> None:
@@ -114,9 +130,12 @@ async def run_server() -> None:
     logger.info(f"Starting MCP server on {settings.host}:{settings.port}")
     logger.info(f"Transport: {settings.transport}")
     
+    # Get the MCP server instance
+    server = get_mcp_server()
+    
     # Run based on transport
     if settings.transport == "stdio":
-        await mcp.run_stdio_async()
+        await server.run_stdio_async()
     else:
         # SSE transport
-        await mcp.run_sse_async()
+        await server.run_sse_async()
