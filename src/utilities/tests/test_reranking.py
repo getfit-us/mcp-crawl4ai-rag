@@ -194,3 +194,71 @@ class TestRerankerInitialization:
         
         # Should use provided model
         assert reranker.model == mock_cross_encoder
+    
+    @patch('crawl4ai_mcp.utilities.reranking.CrossEncoder')
+    def test_init_with_custom_url(self, MockCrossEncoder, test_settings) -> None:
+        """Test initialization with custom model URL."""
+        test_settings.use_reranking = True
+        test_settings.cross_encoder_model = "default-model"
+        test_settings.custom_cross_encoder_url = "https://custom-model-url.com/model"
+        
+        mock_model = Mock()
+        MockCrossEncoder.return_value = mock_model
+        
+        reranker = Reranker(settings=test_settings)
+        
+        # Should initialize with custom URL
+        MockCrossEncoder.assert_called_once_with("https://custom-model-url.com/model")
+        assert reranker.model == mock_model
+    
+    @patch('crawl4ai_mcp.utilities.reranking.CrossEncoder')
+    def test_init_with_local_path(self, MockCrossEncoder, test_settings) -> None:
+        """Test initialization with local model path."""
+        test_settings.use_reranking = True
+        test_settings.cross_encoder_model = "default-model"
+        test_settings.cross_encoder_model_local_path = "/path/to/local/model"
+        
+        mock_model = Mock()
+        MockCrossEncoder.return_value = mock_model
+        
+        reranker = Reranker(settings=test_settings)
+        
+        # Should initialize with local path (higher priority than URL)
+        MockCrossEncoder.assert_called_once_with("/path/to/local/model")
+        assert reranker.model == mock_model
+    
+    @patch('crawl4ai_mcp.utilities.reranking.CrossEncoder')
+    def test_init_with_local_path_priority(self, MockCrossEncoder, test_settings) -> None:
+        """Test that local path takes priority over custom URL."""
+        test_settings.use_reranking = True
+        test_settings.cross_encoder_model = "default-model"
+        test_settings.custom_cross_encoder_url = "https://custom-model-url.com/model"
+        test_settings.cross_encoder_model_local_path = "/path/to/local/model"
+        
+        mock_model = Mock()
+        MockCrossEncoder.return_value = mock_model
+        
+        reranker = Reranker(settings=test_settings)
+        
+        # Should use local path, not URL
+        MockCrossEncoder.assert_called_once_with("/path/to/local/model")
+        assert reranker.model == mock_model
+    
+    @patch('crawl4ai_mcp.utilities.reranking.CrossEncoder')
+    def test_init_custom_model_fallback(self, MockCrossEncoder, test_settings) -> None:
+        """Test fallback to default model when custom model fails."""
+        test_settings.use_reranking = True
+        test_settings.cross_encoder_model = "default-model"
+        test_settings.custom_cross_encoder_url = "https://invalid-url.com/model"
+        
+        # Mock first call (custom URL) to fail, second call (default) to succeed
+        mock_model = Mock()
+        MockCrossEncoder.side_effect = [Exception("Failed to load"), mock_model]
+        
+        reranker = Reranker(settings=test_settings)
+        
+        # Should try custom URL first, then fallback to default
+        assert MockCrossEncoder.call_count == 2
+        MockCrossEncoder.assert_any_call("https://invalid-url.com/model")
+        MockCrossEncoder.assert_any_call("default-model")
+        assert reranker.model == mock_model

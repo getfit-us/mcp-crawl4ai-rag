@@ -30,7 +30,35 @@ class Reranker:
         
         # Initialize model if not provided and reranking is enabled
         if self.model is None and self.settings.use_reranking:
-            self.model = CrossEncoder(self.settings.cross_encoder_model)
+            model_path = self._get_model_path()
+            if model_path:
+                try:
+                    self.model = CrossEncoder(model_path)
+                    logger.info(f"Loaded reranking model from: {model_path}")
+                except Exception as e:
+                    logger.error(f"Failed to load reranking model from {model_path}: {e}")
+                    logger.info(f"Falling back to default model: {self.settings.cross_encoder_model}")
+                    self.model = CrossEncoder(self.settings.cross_encoder_model)
+            else:
+                self.model = CrossEncoder(self.settings.cross_encoder_model)
+    
+    def _get_model_path(self) -> Optional[str]:
+        """
+        Determine the model path based on configuration settings.
+        
+        Returns:
+            Model path (URL, local path, or None to use default)
+        """
+        # Check for local path first (highest priority)
+        if hasattr(self.settings, 'cross_encoder_model_local_path') and self.settings.cross_encoder_model_local_path:
+            return self.settings.cross_encoder_model_local_path
+        
+        # Check for custom URL (second priority)
+        if hasattr(self.settings, 'custom_cross_encoder_url') and self.settings.custom_cross_encoder_url:
+            return self.settings.custom_cross_encoder_url
+        
+        # Return None to use default model
+        return None
     
     def rerank_results(
         self, 

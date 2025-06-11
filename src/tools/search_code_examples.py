@@ -1,7 +1,6 @@
 """Tool for searching code examples."""
 
 import json
-from sentence_transformers import CrossEncoder
 
 from mcp.server.fastmcp import Context
 
@@ -70,9 +69,8 @@ async def search_code_examples(
         
         # Apply reranking if enabled
         if settings.use_reranking and results:
-            # Initialize reranker
-            model = CrossEncoder(settings.cross_encoder_model)
-            reranker = Reranker(model=model, settings=settings)
+            # Initialize reranker (will handle custom model paths automatically)
+            reranker = Reranker(settings=settings)
             
             # Prepare results for reranking - use summary as content
             for result in results:

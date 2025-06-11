@@ -147,9 +147,28 @@ TRANSPORT=sse
 
 # OpenAI API Configuration
 OPENAI_API_KEY=your_openai_api_key
+# Optional: Custom base URL for OpenAI-compatible endpoints (e.g., local models, Azure OpenAI)
+# OPENAI_BASE_URL=https://your-custom-endpoint.com/v1
+# Optional: Organization ID for OpenAI
+# OPENAI_ORGANIZATION=your_org_id
 
 # LLM for summaries and contextual embeddings
 MODEL_CHOICE=gpt-4o-mini
+
+# Embedding Model Configuration
+EMBEDDING_MODEL=text-embedding-3-small
+EMBEDDING_DIMENSIONS=1536
+# Optional: Embedding service type ("openai", "huggingface", "custom")
+# EMBEDDING_SERVICE_TYPE=openai
+# Optional: Custom embedding endpoint URL
+# CUSTOM_EMBEDDING_URL=https://your-embedding-api.com/embed
+
+# Reranking Model Configuration
+CROSS_ENCODER_MODEL=cross-encoder/ms-marco-MiniLM-L-6-v2
+# Optional: Custom reranking model URL (e.g., from Hugging Face Hub or custom endpoint)
+# CUSTOM_CROSS_ENCODER_URL=https://huggingface.co/your-username/your-reranking-model
+# Optional: Local path to reranking model (takes priority over URL)
+# CROSS_ENCODER_MODEL_LOCAL_PATH=/path/to/your/local/reranking/model
 
 # RAG Strategies (set to "true" or "false", default to "false")
 USE_CONTEXTUAL_EMBEDDINGS=false
@@ -193,12 +212,13 @@ Enables specialized code example extraction and storage. When crawling documenta
 - **Benefits**: Provides a dedicated `search_code_examples` tool that AI agents can use to find specific code implementations.
 
 #### 4. **USE_RERANKING**
-Applies cross-encoder reranking to search results after initial retrieval. Uses a lightweight cross-encoder model (`cross-encoder/ms-marco-MiniLM-L-6-v2`) to score each result against the original query, then reorders results by relevance.
+Applies cross-encoder reranking to search results after initial retrieval. Uses a cross-encoder model (default: `cross-encoder/ms-marco-MiniLM-L-6-v2`) to score each result against the original query, then reorders results by relevance. Supports custom models via URLs or local paths.
 
 - **When to use**: Enable this when search precision is critical and you need the most relevant results at the top. Particularly useful for complex queries where semantic similarity alone might not capture query intent.
 - **Trade-offs**: Adds ~100-200ms to search queries depending on result count, but significantly improves result ordering.
 - **Cost**: No additional API costs - uses a local model that runs on CPU.
 - **Benefits**: Better result relevance, especially for complex queries. Works with both regular RAG search and code example search.
+- **Custom Models**: You can use custom reranking models from Hugging Face Hub, local files, or custom endpoints.
 
 ### Recommended Configurations
 
@@ -224,6 +244,54 @@ USE_CONTEXTUAL_EMBEDDINGS=false
 USE_HYBRID_SEARCH=true
 USE_AGENTIC_RAG=false
 USE_RERANKING=false
+```
+
+## Custom Model Configuration
+
+### Custom Reranking Models
+
+The system supports custom reranking models through several configuration options:
+
+#### 1. **Hugging Face Hub Models**
+You can use any cross-encoder model from Hugging Face Hub:
+
+```bash
+# Use a different model from Hugging Face
+CROSS_ENCODER_MODEL=sentence-transformers/ms-marco-MiniLM-L-12-v2
+
+# Or specify a custom model via URL
+CUSTOM_CROSS_ENCODER_URL=https://huggingface.co/your-username/your-custom-reranker
+```
+
+#### 2. **Local Model Files**
+For offline usage or custom trained models:
+
+```bash
+# Use a local model directory
+CROSS_ENCODER_MODEL_LOCAL_PATH=/path/to/your/local/reranking/model
+```
+
+#### 3. **Priority Order**
+The system checks for models in this order:
+1. **Local Path** (`CROSS_ENCODER_MODEL_LOCAL_PATH`) - highest priority
+2. **Custom URL** (`CUSTOM_CROSS_ENCODER_URL`) - second priority  
+3. **Default Model** (`CROSS_ENCODER_MODEL`) - fallback
+
+#### 4. **Popular Reranking Models**
+Some recommended cross-encoder models:
+
+```bash
+# Lightweight and fast (default)
+CROSS_ENCODER_MODEL=cross-encoder/ms-marco-MiniLM-L-6-v2
+
+# More accurate but slower
+CROSS_ENCODER_MODEL=cross-encoder/ms-marco-MiniLM-L-12-v2
+
+# Multilingual support
+CROSS_ENCODER_MODEL=cross-encoder/mmarco-mMiniLMv2-L12-H384-v1
+
+# Domain-specific (e.g., for biomedical content)
+CROSS_ENCODER_MODEL=cross-encoder/ms-marco-electra-base
 ```
 
 ## Running the Server

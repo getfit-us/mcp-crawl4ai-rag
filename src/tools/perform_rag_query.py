@@ -1,7 +1,6 @@
 """Tool for performing RAG queries."""
 
 import json
-from sentence_transformers import CrossEncoder
 
 from mcp.server.fastmcp import Context
 
@@ -72,9 +71,8 @@ async def perform_rag_query(
         
         # Apply reranking if enabled
         if settings.use_reranking and results:
-            # Initialize reranker
-            model = CrossEncoder(settings.cross_encoder_model)
-            reranker = Reranker(model=model, settings=settings)
+            # Initialize reranker (will handle custom model paths automatically)
+            reranker = Reranker(settings=settings)
             
             # Convert SearchResult objects to dictionaries for reranking
             results_dict = []

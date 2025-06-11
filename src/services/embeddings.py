@@ -22,7 +22,15 @@ class EmbeddingService:
             settings: Application settings (optional)
         """
         self.settings = settings or get_settings()
-        self.client = openai.OpenAI(api_key=self.settings.openai_api_key)
+        
+        # Initialize OpenAI client with optional custom base URL and organization
+        client_kwargs = {"api_key": self.settings.openai_api_key}
+        if self.settings.openai_base_url:
+            client_kwargs["base_url"] = self.settings.openai_base_url
+        if self.settings.openai_organization:
+            client_kwargs["organization"] = self.settings.openai_organization
+            
+        self.client = openai.OpenAI(**client_kwargs)
         self.max_retries = 3
         self.retry_delay = 1.0
     

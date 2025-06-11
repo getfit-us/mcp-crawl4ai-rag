@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     
     # OpenAI Configuration - REQUIRED
     openai_api_key: str
+    openai_base_url: Optional[str] = None  # Custom base URL for OpenAI-compatible endpoints
+    openai_organization: Optional[str] = None  # Organization ID for OpenAI
     model_choice: str = "gpt-4o-mini"
     
     # PostgreSQL Configuration - REQUIRED
@@ -45,7 +47,11 @@ class Settings(BaseSettings):
     # Model Configuration
     embedding_model: str = "text-embedding-3-small"
     embedding_dimensions: int = 1536
+    embedding_service_type: str = "openai"  # "openai", "huggingface", "custom"
+    custom_embedding_url: Optional[str] = None  # For custom embedding endpoints
     cross_encoder_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    custom_cross_encoder_url: Optional[str] = None  # For custom reranking model URLs
+    cross_encoder_model_local_path: Optional[str] = None  # For local model paths
     
     model_config = SettingsConfigDict(
         env_file=Path(__file__).parent.parent / ".env",
