@@ -158,8 +158,3 @@ $$;
 -- GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO your_app_user;
 -- GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO your_app_user;
 
-PRINT 'Database setup completed successfully!';
-PRINT 'Make sure to:';
-PRINT '1. Create a user for your application if needed';
-PRINT '2. Grant appropriate permissions to your application user';
-PRINT '3. Update your .env file with the correct database credentials'; 

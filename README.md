@@ -310,6 +310,18 @@ uv run crawl4ai-mcp
 
 The server will start and listen on the configured host and port.
 
+## Troubleshooting
+
+### `ConnectionRefusedError`
+
+If you encounter a `ConnectionRefusedError` when starting the server, it means the application cannot connect to your PostgreSQL database. This is typically a configuration issue.
+
+- **Check `POSTGRES_HOST`**: If your database is running on the same machine as the application, ensure `POSTGRES_HOST` in your `.env` file is set to `localhost`, not an IP address like `192.168.1.244`. Many default PostgreSQL installations only listen for connections on `localhost` (`127.0.0.1`).
+
+- **Check if PostgreSQL is running**: Make sure your PostgreSQL server is active.
+
+- **Check PostgreSQL `listen_addresses`**: If you must use an IP address, ensure your PostgreSQL server is configured to listen on that address. You may need to edit your `postgresql.conf` file and set `listen_addresses = '*'`.
+
 ## Integration with MCP Clients
 
 ### SSE Configuration

@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote_plus
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -54,7 +55,6 @@ class Settings(BaseSettings):
     cross_encoder_model_local_path: Optional[str] = None  # For local model paths
     
     model_config = SettingsConfigDict(
-        env_file=Path(__file__).parent.parent / ".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -72,8 +72,11 @@ class Settings(BaseSettings):
     @property
     def postgres_dsn(self) -> str:
         """Get PostgreSQL connection string."""
+        # URL-encode the username and password to handle special characters
+        user = quote_plus(self.postgres_user)
+        password = quote_plus(self.postgres_password)
         return (
-            f"postgresql://{self.postgres_user}:{self.postgres_password}@"
+            f"postgresql://{user}:{password}@"
             f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
             f"?sslmode={self.postgres_sslmode}"
         )
