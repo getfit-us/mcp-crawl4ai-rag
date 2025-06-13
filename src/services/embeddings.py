@@ -23,14 +23,25 @@ class EmbeddingService:
         """
         self.settings = settings or get_settings()
         
-        # Initialize OpenAI client with optional custom base URL and organization
-        client_kwargs = {"api_key": self.settings.openai_api_key}
+        # Initialize OpenAI client for chat completions
+        chat_client_kwargs = {"api_key": self.settings.openai_api_key}
         if self.settings.openai_base_url:
-            client_kwargs["base_url"] = self.settings.openai_base_url
+            chat_client_kwargs["base_url"] = self.settings.openai_base_url
         if self.settings.openai_organization:
-            client_kwargs["organization"] = self.settings.openai_organization
+            chat_client_kwargs["organization"] = self.settings.openai_organization
             
-        self.client = openai.OpenAI(**client_kwargs)
+        self.client = openai.OpenAI(**chat_client_kwargs)
+
+        # Initialize a separate client for embeddings
+        embedding_client_kwargs = {"api_key": self.settings.openai_api_key}
+        if self.settings.custom_embedding_url:
+            embedding_client_kwargs["base_url"] = self.settings.custom_embedding_url
+        elif self.settings.openai_base_url:
+            embedding_client_kwargs["base_url"] = self.settings.openai_base_url
+        if self.settings.openai_organization:
+            embedding_client_kwargs["organization"] = self.settings.openai_organization
+
+        self.embedding_client = openai.OpenAI(**embedding_client_kwargs)
         self.max_retries = 3
         self.retry_delay = 1.0
     
@@ -66,7 +77,7 @@ class EmbeddingService:
                 loop = asyncio.get_event_loop()
                 response = await loop.run_in_executor(
                     None,
-                    lambda: self.client.embeddings.create(
+                    lambda: self.embedding_client.embeddings.create(
                         model=self.settings.embedding_model,
                         input=texts
                     )
@@ -94,7 +105,7 @@ class EmbeddingService:
                             loop = asyncio.get_event_loop()
                             individual_response = await loop.run_in_executor(
                                 None,
-                                lambda t=text: self.client.embeddings.create(
+                                lambda t=text: self.embedding_client.embeddings.create(
                                     model=self.settings.embedding_model,
                                     input=[t]
                                 )

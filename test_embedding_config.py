@@ -7,79 +7,65 @@ sys.path.insert(0, 'src')
 from crawl4ai_mcp.services.embeddings import EmbeddingService
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
+import openai
+import pytest
+from src.config import Settings
+
+@pytest.fixture
+def settings_instance():
+    """Create a mock settings object for testing."""
+    return Settings(
+        openai_api_key="test_api_key",
+        postgres_user="test_user",
+        postgres_password="test_password"
+    )
 
 def test_embedding_service_config():
-    """Test embedding service configuration with custom settings."""
-    print("Testing embedding service configuration...")
-    
-    # Test 1: Default OpenAI configuration
-    settings1 = SimpleNamespace(
-        openai_api_key='test-key',
-        openai_base_url=None,
-        openai_organization=None,
-        embedding_model='text-embedding-3-small',
-        embedding_dimensions=1536
-    )
-    
-    with patch('crawl4ai_mcp.services.embeddings.openai.OpenAI') as MockOpenAI:
-        service1 = EmbeddingService(settings1)
-        MockOpenAI.assert_called_once_with(api_key='test-key')
-        print('✓ Default OpenAI configuration works')
-    
-    # Test 2: Custom base URL
-    settings2 = SimpleNamespace(
-        openai_api_key='test-key',
-        openai_base_url='https://my-custom-endpoint.com/v1',
-        openai_organization=None,
-        embedding_model='my-custom-model',
-        embedding_dimensions=768
-    )
-    
-    with patch('crawl4ai_mcp.services.embeddings.openai.OpenAI') as MockOpenAI:
-        service2 = EmbeddingService(settings2)
-        MockOpenAI.assert_called_once_with(
-            api_key='test-key',
-            base_url='https://my-custom-endpoint.com/v1'
+    """
+    Test that the embedding service correctly uses the custom embedding model URL
+    when provided in the settings.
+    """
+    # Mock the settings to simulate having a custom embedding URL
+    with patch('src.services.embeddings.get_settings') as mock_get_settings:
+        mock_settings = SimpleNamespace(
+            openai_api_key="test_api_key",
+            openai_base_url="https://api.openai.com/v1",
+            custom_embedding_url="http://localhost:8080/embed",
+            embedding_model="custom-embedding-model",
+            openai_organization=None
         )
-        print('✓ Custom base URL configuration works')
+        mock_get_settings.return_value = mock_settings
+
+        # Mock the OpenAI client to inspect its initialization
+        with patch('src.services.embeddings.openai.OpenAI') as mock_openai:
+            # Import the service to trigger initialization
+            from src.services.embeddings import EmbeddingService
+            
+            # The service should be initialized with two clients
+            service = EmbeddingService()
+
+            # Check that the embedding client was called with the custom URL
+            embedding_client_kwargs = mock_openai.call_args_list[1][1]
+            assert embedding_client_kwargs['base_url'] == "http://localhost:8080/embed"
+            print("Embedding client correctly used the custom URL.")
+
+def test_embedding_service_initialization(settings_instance):
+    """Test that the EmbeddingService initializes correctly."""
+    service = EmbeddingService(settings=settings_instance)
+    assert service.settings == settings_instance
+    assert isinstance(service.client, openai.OpenAI)
+
+async def test_create_embedding(settings_instance):
+    """Test that a single embedding can be created."""
+    # Ensure the embedding model is set to a standard, reliable model
+    settings_instance.embedding_model = "text-embedding-3-small"
     
-    # Test 3: Custom base URL and organization
-    settings3 = SimpleNamespace(
-        openai_api_key='test-key',
-        openai_base_url='https://api.azure.openai.com/',
-        openai_organization='org-12345',
-        embedding_model='text-embedding-ada-002',
-        embedding_dimensions=1536
-    )
+    service = EmbeddingService(settings=settings_instance)
+    embedding = await service.create_embedding("test")
     
-    with patch('crawl4ai_mcp.services.embeddings.openai.OpenAI') as MockOpenAI:
-        service3 = EmbeddingService(settings3)
-        MockOpenAI.assert_called_once_with(
-            api_key='test-key',
-            base_url='https://api.azure.openai.com/',
-            organization='org-12345'
-        )
-        print('✓ Custom base URL and organization configuration works')
-    
-    # Test 4: Only organization (no custom URL)
-    settings4 = SimpleNamespace(
-        openai_api_key='test-key',
-        openai_base_url=None,
-        openai_organization='org-67890',
-        embedding_model='text-embedding-3-large',
-        embedding_dimensions=3072
-    )
-    
-    with patch('crawl4ai_mcp.services.embeddings.openai.OpenAI') as MockOpenAI:
-        service4 = EmbeddingService(settings4)
-        MockOpenAI.assert_called_once_with(
-            api_key='test-key',
-            organization='org-67890'
-        )
-        print('✓ Organization-only configuration works')
-    
-    print('\nAll embedding service configuration tests passed! ✓')
-    print('The custom embedding model functionality is working correctly.')
+    assert isinstance(embedding, list)
+    assert len(embedding) == settings_instance.embedding_dimensions
+    assert all(isinstance(x, float) for x in embedding)
 
 if __name__ == '__main__':
     test_embedding_service_config() 

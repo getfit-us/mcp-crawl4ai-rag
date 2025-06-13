@@ -148,6 +148,7 @@ TRANSPORT=sse
 # OpenAI API Configuration
 OPENAI_API_KEY=your_openai_api_key
 # Optional: Custom base URL for OpenAI-compatible endpoints (e.g., local models, Azure OpenAI)
+# Use this for chat/completion models
 # OPENAI_BASE_URL=https://your-custom-endpoint.com/v1
 # Optional: Organization ID for OpenAI
 # OPENAI_ORGANIZATION=your_org_id
@@ -158,10 +159,11 @@ MODEL_CHOICE=gpt-4o-mini
 # Embedding Model Configuration
 EMBEDDING_MODEL=text-embedding-3-small
 EMBEDDING_DIMENSIONS=1536
+# Optional: Custom embedding endpoint URL for custom embedding models
+# If you are using a separate server for embeddings, specify its URL here
+# CUSTOM_EMBEDDING_URL=https://your-embedding-api.com/embed
 # Optional: Embedding service type ("openai", "huggingface", "custom")
 # EMBEDDING_SERVICE_TYPE=openai
-# Optional: Custom embedding endpoint URL
-# CUSTOM_EMBEDDING_URL=https://your-embedding-api.com/embed
 
 # Reranking Model Configuration
 CROSS_ENCODER_MODEL=cross-encoder/ms-marco-MiniLM-L-6-v2
@@ -371,8 +373,8 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
         "MODEL_CHOICE": "gpt-4o-mini",
         "EMBEDDING_MODEL": "text-embedding-3-small",
         "EMBEDDING_DIMENSIONS": "1536",
-        "EMBEDDING_SERVICE_TYPE": "openai",
         "CUSTOM_EMBEDDING_URL": "https://your-embedding-api.com/embed",
+        "EMBEDDING_SERVICE_TYPE": "openai",
         "CROSS_ENCODER_MODEL": "cross-encoder/ms-marco-MiniLM-L-6-v2",
         "CUSTOM_CROSS_ENCODER_URL": "https://huggingface.co/your-username/your-reranking-model",
         "CROSS_ENCODER_MODEL_LOCAL_PATH": "/path/to/your/local/reranking/model",
@@ -407,8 +409,8 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
                "-e", "MODEL_CHOICE",
                "-e", "EMBEDDING_MODEL",
                "-e", "EMBEDDING_DIMENSIONS",
-               "-e", "EMBEDDING_SERVICE_TYPE",
                "-e", "CUSTOM_EMBEDDING_URL",
+               "-e", "EMBEDDING_SERVICE_TYPE",
                "-e", "CROSS_ENCODER_MODEL",
                "-e", "CUSTOM_CROSS_ENCODER_URL",
                "-e", "CROSS_ENCODER_MODEL_LOCAL_PATH",
@@ -431,8 +433,8 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
         "MODEL_CHOICE": "gpt-4o-mini",
         "EMBEDDING_MODEL": "text-embedding-3-small",
         "EMBEDDING_DIMENSIONS": "1536",
-        "EMBEDDING_SERVICE_TYPE": "openai",
         "CUSTOM_EMBEDDING_URL": "https://your-embedding-api.com/embed",
+        "EMBEDDING_SERVICE_TYPE": "openai",
         "CROSS_ENCODER_MODEL": "cross-encoder/ms-marco-MiniLM-L-6-v2",
         "CUSTOM_CROSS_ENCODER_URL": "https://huggingface.co/your-username/your-reranking-model",
         "CROSS_ENCODER_MODEL_LOCAL_PATH": "/path/to/your/local/reranking/model",

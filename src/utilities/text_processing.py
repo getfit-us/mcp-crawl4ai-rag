@@ -138,13 +138,16 @@ Please give a short succinct context to situate this chunk within the overall do
                 )
             )
             
-            # Extract the generated context
-            context = response.choices[0].message.content.strip()
+            # Extract the generated context and ensure it's not None
+            context = response.choices[0].message.content
+            if context:
+                context = context.strip()
+                # Combine the context with the original chunk
+                contextual_text = f"{context}\n---\n{chunk}"
+                return contextual_text, True
             
-            # Combine the context with the original chunk
-            contextual_text = f"{context}\n---\n{chunk}"
-            
-            return contextual_text, True
+            logger.warning("Context generation returned empty content. Using original chunk instead.")
+            return chunk, False
         
         except Exception as e:
             logger.error(f"Error generating contextual embedding: {e}. Using original chunk instead.")
