@@ -120,7 +120,7 @@ async def test_create_embeddings_batch_partial_failure(embedding_service) -> Non
 
         assert len(embeddings) == 2
         assert embeddings[0] == [0.1, 0.2, 0.3]
-        assert embeddings[1] == [0.0] * embedding_service.settings.embedding_dimensions
+        assert embeddings[1] == [0.0] * 1536
 
 
 @pytest.mark.asyncio
@@ -137,7 +137,7 @@ async def test_create_embedding_failure(embedding_service) -> None:
     """Test failure to create a single embedding."""
     with patch.object(embedding_service.embedding_client.embeddings, 'create', side_effect=Exception("API error")):
         embedding = await embedding_service.create_embedding("test text")
-        assert embedding == [0.0] * embedding_service.settings.embedding_dimensions
+        assert embedding == [0.0] * 1536
 
 
 @pytest.mark.asyncio

@@ -26,7 +26,7 @@ async def get_available_sources(ctx: Context) -> str:
     try:
         # Get context and initialize service
         context: CrawlContext = ctx.request_context.lifespan_context
-        postgres_pool = context.supabase_client  # Field name kept for compatibility
+        postgres_pool = context.supabase_client  # Field name kept for compatibility / uses supabase or local postgres
         settings = context.settings
         
         # Initialize database service

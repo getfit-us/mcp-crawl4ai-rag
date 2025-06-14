@@ -56,7 +56,11 @@ async def smart_crawl_url(
         # Initialize services
         embedding_service = EmbeddingService(settings)
         database_service = DatabaseService(postgres_pool, settings)
-        crawling_service = CrawlingService(context.crawler, database_service, settings)
+        crawling_service = CrawlingService(
+            crawler=context.crawler, 
+            settings=settings, 
+            embedding_service=embedding_service
+        )
         text_processor = TextProcessor(settings, embedding_service)
         
         # Override chunk size if specified

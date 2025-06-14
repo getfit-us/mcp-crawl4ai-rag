@@ -31,7 +31,7 @@ class CrawlingService:
         """
         self.crawler = crawler
         self.settings = settings or get_settings()
-        self.embedding_service = embedding_service or EmbeddingService(self.settings)
+        self.embedding_service =  EmbeddingService(self.settings)
     
     def is_sitemap(self, url: str) -> bool:
         """
@@ -78,6 +78,12 @@ class CrawlingService:
                 logger.error(f"Error parsing sitemap XML: {e}")
 
         return urls
+    
+    def remove_think_tags(self, text: str) -> str:
+        """
+        Remove <think> tags from text.
+        """
+        return text.replace("<think>", "").replace("</think>", "")
     
     async def crawl_markdown_file(self, url: str) -> List[Dict[str, Any]]:
         """
@@ -309,17 +315,19 @@ Based on the code example and its surrounding context, provide a concise summary
             # Use embedding service's OpenAI client
             response = await self.embedding_service._run_in_executor(
                 lambda: self.embedding_service.client.chat.completions.create(
-                    model=self.settings.model_choice,
+                    model=self.settings.summary_llm_model,
                     messages=[
                         {"role": "system", "content": "You are a helpful assistant that provides concise code example summaries."},
                         {"role": "user", "content": prompt}
                     ],
                     temperature=0.3,
-                    max_tokens=100
+                    max_tokens=4000
                 )
             )
             
-            return response.choices[0].message.content.strip()
+           
+            
+            return self.remove_think_tags(response.choices[0].message.content.strip() if response.choices[0].message.content else "")
         
         except Exception as e:
             logger.error(f"Error generating code example summary: {e}")
@@ -365,19 +373,26 @@ The above content is from the documentation for '{source_id}'. Please provide a 
             # Use embedding service's OpenAI client
             response = await self.embedding_service._run_in_executor(
                 lambda: self.embedding_service.client.chat.completions.create(
-                    model=self.settings.model_choice,
+                    model=self.settings.summary_llm_model,
                     messages=[
                         {"role": "system", "content": "You are a helpful assistant that provides concise library/tool/framework summaries."},
                         {"role": "user", "content": prompt}
                     ],
                     temperature=0.3,
-                    max_tokens=150
+                    max_tokens=4000
                 )
             )
+           
+            summary_content = response.choices[0].message.content
+            if not summary_content:
+                logger.warning(f"LLM returned empty content for {source_id}. Using default summary.")
+                return default_summary
+
+            summary = self.remove_think_tags(summary_content.strip())
             
-            # Extract the generated summary
-            summary = response.choices[0].message.content.strip()
-            
+            if not summary:
+                logger.warning(f"LLM returned empty summary for {source_id}. Using default summary.")
+                
             # Ensure the summary is not too long
             if len(summary) > max_length:
                 summary = summary[:max_length] + "..."

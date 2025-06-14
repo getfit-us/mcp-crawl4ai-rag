@@ -1,5 +1,6 @@
 """MCP server setup and initialization."""
 
+import json
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -7,12 +8,20 @@ from contextlib import asynccontextmanager
 import asyncpg
 from crawl4ai import AsyncWebCrawler, BrowserConfig
 from mcp.server.fastmcp import FastMCP
+from pgvector.asyncpg import register_vector
 from sentence_transformers import CrossEncoder
 
 from crawl4ai_mcp.config import get_settings
 from crawl4ai_mcp.models import CrawlContext
 
 logger = logging.getLogger(__name__)
+
+
+async def _init_postgres_connection(conn):
+    await register_vector(conn)
+    await conn.set_type_codec(
+        "jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog"
+    )
 
 
 async def get_postgres_pool() -> asyncpg.Pool:
@@ -27,7 +36,8 @@ async def get_postgres_pool() -> asyncpg.Pool:
         settings.postgres_dsn,
         min_size=1,
         max_size=10,
-        command_timeout=60
+        command_timeout=60,
+        init=_init_postgres_connection,
     )
 
 

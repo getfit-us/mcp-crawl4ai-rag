@@ -21,7 +21,7 @@ class EmbeddingService:
         Args:
             settings: Application settings (optional)
         """
-        self.settings = settings or get_settings()
+        self.settings =  get_settings()
         
         # Initialize OpenAI client for chat completions
         chat_client_kwargs = {"api_key": self.settings.openai_api_key}
@@ -40,10 +40,19 @@ class EmbeddingService:
             embedding_client_kwargs["base_url"] = self.settings.openai_base_url
         if self.settings.openai_organization:
             embedding_client_kwargs["organization"] = self.settings.openai_organization
+        
+        logger.info(f"Embedding client kwargs: {embedding_client_kwargs}")
 
         self.embedding_client = openai.OpenAI(**embedding_client_kwargs)
         self.max_retries = 3
         self.retry_delay = 1.0
+        
+    def remove_think_tags(self, text: str) -> str:
+        """
+        Remove <think> tags from text.
+        """
+        return text.replace("<think>", "").replace("</think>", "")
+    
     
     async def _run_in_executor(self, func: Callable[[], Any]) -> Any:
         """
@@ -79,7 +88,8 @@ class EmbeddingService:
                     None,
                     lambda: self.embedding_client.embeddings.create(
                         model=self.settings.embedding_model,
-                        input=texts
+                        input=texts,
+                        dimensions=self.settings.embedding_dimensions
                     )
                 )
                 
@@ -107,7 +117,8 @@ class EmbeddingService:
                                 None,
                                 lambda t=text: self.embedding_client.embeddings.create(
                                     model=self.settings.embedding_model,
-                                    input=[t]
+                                    input=[t],
+                                    dimensions=self.settings.embedding_dimensions
                                 )
                             )
                             embeddings.append(individual_response.data[0].embedding)
@@ -177,7 +188,7 @@ Please give a short succinct context to situate this chunk within the whole docu
             response = await loop.run_in_executor(
                 None,
                 lambda: self.client.chat.completions.create(
-                    model=self.settings.model_choice,
+                    model=self.settings.summary_llm_model,
                     messages=[
                         {
                             "role": "system",
@@ -186,11 +197,11 @@ Please give a short succinct context to situate this chunk within the whole docu
                         {"role": "user", "content": prompt}
                     ],
                     temperature=0,
-                    max_tokens=200
+                    max_tokens=4000
                 )
             )
             
-            context = response.choices[0].message.content
+            context = self.remove_think_tags(response.choices[0].message.content.strip())
             contextual_text = f"{context}\n---\n{chunk}"
             
             return contextual_text, True

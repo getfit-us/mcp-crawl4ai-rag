@@ -24,6 +24,12 @@ class TextProcessor:
         self.settings = settings or get_settings()
         self.embedding_service = embedding_service or EmbeddingService(self.settings)
     
+    def remove_think_tags(self, text: str) -> str:
+        """
+        Remove <think> tags from text.
+        """
+        return text.replace("<think>", "").replace("</think>", "")
+    
     def smart_chunk_markdown(self, text: str, chunk_size: int = 5000) -> List[str]:
         """
         Split text into chunks, respecting code blocks and paragraphs.
@@ -128,18 +134,18 @@ Please give a short succinct context to situate this chunk within the overall do
             # Use embedding service's OpenAI client
             response = await self.embedding_service._run_in_executor(
                 lambda: self.embedding_service.client.chat.completions.create(
-                    model=self.settings.model_choice,
+                    model=self.settings.summary_llm_model,
                     messages=[
                         {"role": "system", "content": "You are a helpful assistant that provides concise contextual information."},
                         {"role": "user", "content": prompt}
                     ],
                     temperature=0.3,
-                    max_tokens=200
+                    max_tokens=4000
                 )
             )
             
             # Extract the generated context and ensure it's not None
-            context = response.choices[0].message.content
+            context = self.remove_think_tags(response.choices[0].message.content.strip())
             if context:
                 context = context.strip()
                 # Combine the context with the original chunk

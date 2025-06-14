@@ -40,7 +40,7 @@ async def crawl_single_page(
         
         # Initialize services
         database_service = DatabaseService(postgres_pool, settings)
-        crawling_service = CrawlingService(context.crawler, database_service, settings)
+        crawling_service = CrawlingService(crawler=context.crawler, settings=settings)
         
         # Parse domain for source identification
         domain = urlparse(url).netloc

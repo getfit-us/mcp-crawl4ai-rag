@@ -23,7 +23,7 @@ class DatabaseService:
             settings: Application settings (optional)
         """
         self.pool = pool
-        self.settings = settings or get_settings()
+        self.settings = get_settings()
     
     async def add_documents(
         self,
@@ -184,7 +184,7 @@ class DatabaseService:
                     metadata['language'] = language
                     
                     batch_data.append((
-                        url, chunk_num, code, summary, json.dumps(metadata), source, embedding
+                        url, chunk_num, code, summary, metadata, source, embedding
                     ))
                 
                 # Insert batch

@@ -12,12 +12,13 @@ dependencies = [
     "crawl4ai==0.6.2",
     "mcp==1.7.1",
     "asyncpg==0.30.0",
+    "pgvector>=0.2.0",
     "openai==1.71.0",
     "python-dotenv>=0.21.0",
     "sentence-transformers>=4.1.0",
     "pytest>=8.3.5",
     "pytest-asyncio>=1.0.0",
-    "pydantic-settings[dotenv]>=2.9.1",
+    "pydantic-settings>=2.9.1",
 ]
 
 [project.scripts]

@@ -154,7 +154,7 @@ OPENAI_API_KEY=your_openai_api_key
 # OPENAI_ORGANIZATION=your_org_id
 
 # LLM for summaries and contextual embeddings
-MODEL_CHOICE=gpt-4o-mini
+SUMMARY_LLM_MODEL=gpt-4o-mini
 
 # Embedding Model Configuration
 EMBEDDING_MODEL=text-embedding-3-small
@@ -192,7 +192,7 @@ POSTGRES_SSLMODE=prefer
 The Crawl4AI RAG MCP server supports four powerful RAG strategies that can be enabled independently:
 
 #### 1. **USE_CONTEXTUAL_EMBEDDINGS**
-When enabled, this strategy enhances each chunk's embedding with additional context from the entire document. The system passes both the full document and the specific chunk to an LLM (configured via `MODEL_CHOICE`) to generate enriched context that gets embedded alongside the chunk content.
+When enabled, this strategy enhances each chunk's embedding with additional context from the entire document. The system passes both the full document and the specific chunk to an LLM (configured via `SUMMARY_LLM_MODEL`) to generate enriched context that gets embedded alongside the chunk content.
 
 - **When to use**: Enable this when you need high-precision retrieval where context matters, such as technical documentation where terms might have different meanings in different sections.
 - **Trade-offs**: Slower indexing due to LLM calls for each chunk, but significantly better retrieval accuracy.
@@ -370,7 +370,7 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
         "OPENAI_API_KEY": "your_openai_api_key",
         "OPENAI_BASE_URL": "https://your-custom-endpoint.com/v1",
         "OPENAI_ORGANIZATION": "your_org_id",
-        "MODEL_CHOICE": "gpt-4o-mini",
+        "SUMMARY_LLM_MODEL": "gpt-4o-mini",
         "EMBEDDING_MODEL": "text-embedding-3-small",
         "EMBEDDING_DIMENSIONS": "1536",
         "CUSTOM_EMBEDDING_URL": "https://your-embedding-api.com/embed",
@@ -406,7 +406,7 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
                "-e", "OPENAI_API_KEY", 
                "-e", "OPENAI_BASE_URL",
                "-e", "OPENAI_ORGANIZATION",
-               "-e", "MODEL_CHOICE",
+               "-e", "SUMMARY_LLM_MODEL",
                "-e", "EMBEDDING_MODEL",
                "-e", "EMBEDDING_DIMENSIONS",
                "-e", "CUSTOM_EMBEDDING_URL",
@@ -430,7 +430,7 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
         "OPENAI_API_KEY": "your_openai_api_key",
         "OPENAI_BASE_URL": "https://your-custom-endpoint.com/v1",
         "OPENAI_ORGANIZATION": "your_org_id",
-        "MODEL_CHOICE": "gpt-4o-mini",
+        "SUMMARY_LLM_MODEL": "gpt-4o-mini",
         "EMBEDDING_MODEL": "text-embedding-3-small",
         "EMBEDDING_DIMENSIONS": "1536",
         "CUSTOM_EMBEDDING_URL": "https://your-embedding-api.com/embed",
