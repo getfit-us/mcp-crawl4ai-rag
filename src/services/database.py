@@ -90,7 +90,7 @@ class DatabaseService:
                     batch_embeddings, batch_metadatas, batch_sources
                 )):
                     batch_data.append((
-                        url, chunk_num, content, json.dumps(metadata), source, embedding
+                        url, chunk_num, content, metadata, source, embedding
                     ))
                 
                 # Insert batch

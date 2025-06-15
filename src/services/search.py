@@ -210,6 +210,7 @@ class SearchService:
                 )
             
             return SearchResponse(
+                success=True,
                 query=request.query,
                 results=all_results,
                 total_results=len(all_results),
@@ -219,6 +220,7 @@ class SearchService:
         except Exception as e:
             logger.error(f"Error performing search: {e}")
             return SearchResponse(
+                success=False,
                 query=request.query,
                 results=[],
                 total_results=0,

@@ -93,8 +93,11 @@ class EmbeddingService:
                     )
                 )
                 
-                # Extract embeddings from response
+                # Extract embeddings and validate dimensions
                 embeddings = [item.embedding for item in response.data]
+                actual_dims = len(embeddings[0]) if embeddings else 0
+                if actual_dims != self.settings.embedding_dimensions:
+                    logger.warning(f"Dimension mismatch: Model {self.settings.embedding_model} returned {actual_dims} dimensions, expected {self.settings.embedding_dimensions}")
                 return embeddings
                 
             except Exception as e:
@@ -121,7 +124,10 @@ class EmbeddingService:
                                     dimensions=self.settings.embedding_dimensions
                                 )
                             )
-                            embeddings.append(individual_response.data[0].embedding)
+                            individual_embedding = individual_response.data[0].embedding
+                            if len(individual_embedding) != self.settings.embedding_dimensions:
+                                logger.warning(f"Individual embedding dimension mismatch: Model {self.settings.embedding_model} returned {len(individual_embedding)} dimensions, expected {self.settings.embedding_dimensions}")
+                            embeddings.append(individual_embedding)
                             
                             # Add small delay between individual requests
                             if i < len(texts) - 1:
