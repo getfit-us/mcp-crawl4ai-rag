@@ -88,13 +88,14 @@ class EmbeddingService:
                     "input": texts
                 }
                 
-                # Only add dimensions parameter for models that support it (OpenAI text-embedding-3-* models)
-                if self.settings.embedding_model.startswith("text-embedding-3"):
-                    embedding_params["dimensions"] = self.settings.embedding_dimensions
+               
                 
                 response = await loop.run_in_executor(
                     None,
-                    lambda: self.embedding_client.embeddings.create(**embedding_params)
+                    lambda: self.embedding_client.embeddings.create(
+                        model=self.settings.embedding_model,
+                        input=texts,
+                    )
                 )
                 
                 # Extract embeddings and validate dimensions
@@ -129,20 +130,13 @@ class EmbeddingService:
                     for i, text in enumerate(texts):
                         try:
                             loop = asyncio.get_event_loop()
-                            
-                            # Prepare parameters for individual embedding creation
-                            individual_params = {
-                                "model": self.settings.embedding_model,
-                                "input": [text]
-                            }
-                            
-                            # Only add dimensions parameter for models that support it (OpenAI text-embedding-3-* models)
-                            if self.settings.embedding_model.startswith("text-embedding-3"):
-                                individual_params["dimensions"] = self.settings.embedding_dimensions
-                            
                             individual_response = await loop.run_in_executor(
                                 None,
-                                lambda t=text: self.embedding_client.embeddings.create(**individual_params)
+                                lambda t=text: self.embedding_client.embeddings.create(
+                                    model=self.settings.embedding_model,
+                                    input=[t],
+                                    dimensions=self.settings.embedding_dimensions
+                                )
                             )
                             individual_embedding = individual_response.data[0].embedding
                             # Convert numpy arrays to Python lists if necessary
