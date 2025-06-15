@@ -91,7 +91,16 @@ class EmbeddingService:
                 )
                 
                 # Extract embeddings and validate dimensions
-                embeddings = [item.embedding for item in response.data]
+                embeddings = []
+                for item in response.data:
+                    embedding = item.embedding
+                    # Convert numpy arrays to Python lists if necessary
+                    if hasattr(embedding, 'tolist'):
+                        embedding = embedding.tolist()
+                    elif hasattr(embedding, '__iter__') and not isinstance(embedding, list):
+                        embedding = list(embedding)
+                    embeddings.append(embedding)
+                
                 actual_dims = len(embeddings[0]) if embeddings else 0
                 if actual_dims != self.settings.embedding_dimensions:
                     logger.warning(f"Dimension mismatch: Model {self.settings.embedding_model} returned {actual_dims} dimensions, expected {self.settings.embedding_dimensions}")
@@ -122,6 +131,12 @@ class EmbeddingService:
                                 )
                             )
                             individual_embedding = individual_response.data[0].embedding
+                            # Convert numpy arrays to Python lists if necessary
+                            if hasattr(individual_embedding, 'tolist'):
+                                individual_embedding = individual_embedding.tolist()
+                            elif hasattr(individual_embedding, '__iter__') and not isinstance(individual_embedding, list):
+                                individual_embedding = list(individual_embedding)
+                            
                             if len(individual_embedding) != self.settings.embedding_dimensions:
                                 logger.warning(f"Individual embedding dimension mismatch: Model {self.settings.embedding_model} returned {len(individual_embedding)} dimensions, expected {self.settings.embedding_dimensions}")
                             embeddings.append(individual_embedding)
