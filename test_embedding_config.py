@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 import openai
 import pytest
-from src.config import Settings
+from crawl4ai_mcp.config import Settings
 
 @pytest.fixture
 def settings_instance():
@@ -26,7 +26,7 @@ def test_embedding_service_config():
     when provided in the settings.
     """
     # Mock the settings to simulate having a custom embedding URL
-    with patch('src.services.embeddings.get_settings') as mock_get_settings:
+    with patch('crawl4ai_mcp.services.embeddings.get_settings') as mock_get_settings:
         mock_settings = SimpleNamespace(
             openai_api_key="test_api_key",
             openai_base_url="https://api.openai.com/v1",
@@ -37,9 +37,9 @@ def test_embedding_service_config():
         mock_get_settings.return_value = mock_settings
 
         # Mock the OpenAI client to inspect its initialization
-        with patch('src.services.embeddings.openai.OpenAI') as mock_openai:
+        with patch('crawl4ai_mcp.services.embeddings.openai.OpenAI') as mock_openai:
             # Import the service to trigger initialization
-            from src.services.embeddings import EmbeddingService
+            from crawl4ai_mcp.services.embeddings import EmbeddingService
             
             # The service should be initialized with two clients
             service = EmbeddingService()

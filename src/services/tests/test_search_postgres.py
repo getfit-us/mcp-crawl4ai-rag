@@ -9,10 +9,10 @@ from typing import AsyncGenerator
 from unittest.mock import Mock
 
 # Fix import paths to match actual project structure
-from src.services.search import SearchService
-from src.services.embeddings import EmbeddingService
-from src.models import SearchRequest, SearchResult, SearchType
-from src.config import get_settings
+from crawl4ai_mcp.services.search import SearchService
+from crawl4ai_mcp.services.embeddings import EmbeddingService
+from crawl4ai_mcp.models import SearchRequest, SearchResult, SearchType
+from crawl4ai_mcp.config import get_settings
 
 # Set up the test environment variable for OpenAI API key
 os.environ["OPENAI_API_KEY"] = "test-key"

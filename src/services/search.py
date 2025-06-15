@@ -5,9 +5,9 @@ import logging
 from typing import Any, Dict, List, Optional
 
 import asyncpg
-from src.config import get_settings
-from src.models import SearchRequest, SearchResult, SearchResponse, SearchType
-from src.services.embeddings import EmbeddingService
+from crawl4ai_mcp.config import get_settings
+from crawl4ai_mcp.models import SearchRequest, SearchResult, SearchResponse, SearchType
+from crawl4ai_mcp.services.embeddings import EmbeddingService
 
 logger = logging.getLogger(__name__)
 

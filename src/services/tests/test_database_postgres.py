@@ -7,8 +7,8 @@ import os
 from typing import AsyncGenerator
 from unittest.mock import Mock
 
-from src.services.database import DatabaseService
-from src.models import SourceInfo
+from crawl4ai_mcp.services.database import DatabaseService
+from crawl4ai_mcp.models import SourceInfo
 
 # Set fake OpenAI API key for testing
 os.environ["OPENAI_API_KEY"] = "test-key"
