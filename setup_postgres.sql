@@ -52,7 +52,7 @@ END;
 $;
 
 -- Create table after function
-CREATE TABLE sources ( (
+CREATE TABLE sources ( 
     source_id text PRIMARY KEY,
     summary text,
     total_word_count integer DEFAULT 0,
