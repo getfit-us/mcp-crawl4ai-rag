@@ -43,7 +43,7 @@ async def test_create_embeddings_batch_success(embedding_service, mock_openai_re
     with patch.object(embedding_service.embedding_client.embeddings, 'create', return_value=mock_openai_response):
         embeddings = await embedding_service.create_embeddings_batch(texts)
         assert len(embeddings) == 2
-        assert embeddings[0] == [0.1, 0.2, 0.3]
+        assert embeddings[0] == [0.1] * 1536
 
 
 @pytest.mark.asyncio
@@ -63,8 +63,8 @@ async def test_create_embeddings_batch_rate_limit_retry(embedding_service) -> No
             openai.RateLimitError("Rate limit exceeded", response=None, body=None),
             # Create custom mock response with 2 embeddings
             SimpleNamespace(data=[
-                SimpleNamespace(embedding=[0.1, 0.2, 0.3]),
-                SimpleNamespace(embedding=[0.4, 0.5, 0.6])
+                SimpleNamespace(embedding=[0.1] * 1536),
+                SimpleNamespace(embedding=[0.4] * 1536)
             ])
         ]
     )
@@ -73,7 +73,7 @@ async def test_create_embeddings_batch_rate_limit_retry(embedding_service) -> No
                       new=mock_create):
         embeddings = await embedding_service.create_embeddings_batch(texts)
         assert len(embeddings) == 2
-        assert embeddings[1] == [0.4, 0.5, 0.6]
+        assert embeddings[1] == [0.4] * 1536
         assert embedding_service.embedding_client.embeddings.create.call_count == 2
 
 
@@ -84,9 +84,9 @@ async def test_create_embeddings_batch_fallback_to_individual(embedding_service)
     
     # Mock the create method to fail on batch but succeed on individual
     mock_individual_responses = [
-        SimpleNamespace(data=[SimpleNamespace(embedding=[0.1, 0.2, 0.3])]),
-        SimpleNamespace(data=[SimpleNamespace(embedding=[0.4, 0.5, 0.6])]),
-        SimpleNamespace(data=[SimpleNamespace(embedding=[0.7, 0.8, 0.9])])
+        SimpleNamespace(data=[SimpleNamespace(embedding=[0.1] * 1536)]),
+        SimpleNamespace(data=[SimpleNamespace(embedding=[0.4] * 1536)]),
+        SimpleNamespace(data=[SimpleNamespace(embedding=[0.7] * 1536)])
     ]
     mock_create = Mock(
         side_effect=[Exception("Batch failed")] + mock_individual_responses
@@ -98,7 +98,7 @@ async def test_create_embeddings_batch_fallback_to_individual(embedding_service)
         embeddings = await embedding_service.create_embeddings_batch(texts)
 
         assert len(embeddings) == 3
-        assert embeddings[2] == [0.7, 0.8, 0.9]
+        assert embeddings[2] == [0.7] * 1536
         # 1 call for batch, 3 for individual
         assert embedding_service.embedding_client.embeddings.create.call_count == 4
 
@@ -111,7 +111,7 @@ async def test_create_embeddings_batch_partial_failure(embedding_service) -> Non
     mock_create = Mock(
         side_effect=[
             Exception("Batch failed"),
-            SimpleNamespace(data=[SimpleNamespace(embedding=[0.1, 0.2, 0.3])]),
+            SimpleNamespace(data=[SimpleNamespace(embedding=[0.1] * 1536)]),
             Exception("Individual embedding failed")
         ]
     )
@@ -119,17 +119,17 @@ async def test_create_embeddings_batch_partial_failure(embedding_service) -> Non
         embeddings = await embedding_service.create_embeddings_batch(texts)
 
         assert len(embeddings) == 2
-        assert embeddings[0] == [0.1, 0.2, 0.3]
+        assert embeddings[0] == [0.1] * 1536
         assert embeddings[1] == [0.0] * 1536
 
 
 @pytest.mark.asyncio
 async def test_create_embedding_success(embedding_service, mock_openai_response) -> None:
     """Test successful creation of a single embedding."""
-    mock_response = SimpleNamespace(data=[SimpleNamespace(embedding=[0.1, 0.2, 0.3])])
+    mock_response = SimpleNamespace(data=[SimpleNamespace(embedding=[0.1] * 1536)])
     with patch.object(embedding_service.embedding_client.embeddings, 'create', return_value=mock_response):
         embedding = await embedding_service.create_embedding("test text")
-        assert embedding == [0.1, 0.2, 0.3]
+        assert embedding == [0.1] * 1536
 
 
 @pytest.mark.asyncio
