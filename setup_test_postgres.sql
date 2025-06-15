@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS crawled_pages (
     content TEXT NOT NULL,
     metadata JSONB,
     source_id TEXT,
-    embedding vector(1024),  -- PostgreSQL embedding dimensions
+    embedding vector(1536),  -- PostgreSQL embedding dimensions
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (source_id) REFERENCES sources(source_id) ON DELETE CASCADE
 );
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS code_examples (
     summary TEXT,
     metadata JSONB,
     source_id TEXT,
-    embedding vector(1024),  -- PostgreSQL embedding dimensions
+    embedding vector(1536),  -- PostgreSQL embedding dimensions
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (source_id) REFERENCES sources(source_id) ON DELETE CASCADE
 );
@@ -61,7 +61,7 @@ CREATE INDEX IF NOT EXISTS idx_sources_source_id ON sources(source_id);
 
 -- Function to search for documentation chunks
 CREATE OR REPLACE FUNCTION match_crawled_pages (
-  query_embedding vector(1024),
+  query_embedding vector(1536),
   match_count int DEFAULT 10,
   filter jsonb DEFAULT '{}'::jsonb,
   source_filter text DEFAULT NULL
@@ -97,7 +97,7 @@ $$;
 
 -- Function to search for code examples
 CREATE OR REPLACE FUNCTION match_code_examples (
-  query_embedding vector(1024),
+  query_embedding vector(1536),
   match_count int DEFAULT 10,
   filter jsonb DEFAULT '{}'::jsonb,
   source_filter text DEFAULT NULL

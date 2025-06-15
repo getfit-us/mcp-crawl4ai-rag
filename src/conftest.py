@@ -25,7 +25,7 @@ def test_settings() -> Any:
         port=8051,
         transport="sse",
         embedding_model="text-embedding-3-small",
-        embedding_dimensions=1024,
+        embedding_dimensions=1536,
         embedding_service_type="openai",
         custom_embedding_url=None,
         cross_encoder_model="cross-encoder/ms-marco-MiniLM-L-6-v2",
@@ -75,7 +75,7 @@ def mock_openai_client() -> Mock:
     # Mock embeddings
     client.embeddings = Mock()
     client.embeddings.create = AsyncMock(return_value=Mock(
-        data=[Mock(embedding=[0.1] * 1024)]
+        data=[Mock(embedding=[0.1] * 1536)]
     ))
     
     # Mock chat completions

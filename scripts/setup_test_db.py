@@ -77,7 +77,7 @@ async def setup_test_database():
                 content text NOT NULL,
                 metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
                 source_id text NOT NULL,
-                embedding vector(1024),
+                embedding vector(1536),
                 created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
                 
                 UNIQUE(url, chunk_number),
@@ -95,7 +95,7 @@ async def setup_test_database():
                 summary text NOT NULL,
                 metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
                 source_id text NOT NULL,
-                embedding vector(1024),
+                embedding vector(1536),
                 created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
                 
                 UNIQUE(url, chunk_number),
@@ -115,7 +115,7 @@ async def setup_test_database():
         # Create search functions
         await test_conn.execute("""
             CREATE OR REPLACE FUNCTION match_crawled_pages (
-              query_embedding vector(1024),
+              query_embedding vector(1536),
               match_count int DEFAULT 10,
               filter jsonb DEFAULT '{}'::jsonb,
               source_filter text DEFAULT NULL
@@ -152,7 +152,7 @@ async def setup_test_database():
         
         await test_conn.execute("""
             CREATE OR REPLACE FUNCTION match_code_examples (
-              query_embedding vector(1024),
+              query_embedding vector(1536),
               match_count int DEFAULT 10,
               filter jsonb DEFAULT '{}'::jsonb,
               source_filter text DEFAULT NULL

@@ -92,7 +92,7 @@ async def setup_test_schema(conn: asyncpg.Connection) -> None:
             content text NOT NULL,
             metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
             source_id text NOT NULL,
-            embedding vector(1024),
+            embedding vector(1536),
             created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
             
             UNIQUE(url, chunk_number),
@@ -110,7 +110,7 @@ async def setup_test_schema(conn: asyncpg.Connection) -> None:
             summary text NOT NULL,
             metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
             source_id text NOT NULL,
-            embedding vector(1024),
+            embedding vector(1536),
             created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
             
             UNIQUE(url, chunk_number),
@@ -121,7 +121,7 @@ async def setup_test_schema(conn: asyncpg.Connection) -> None:
     # Create search functions
     await conn.execute("""
         CREATE OR REPLACE FUNCTION match_crawled_pages (
-          query_embedding vector(1024),
+          query_embedding vector(1536),
           match_count int DEFAULT 10,
           filter jsonb DEFAULT '{}'::jsonb,
           source_filter text DEFAULT NULL
@@ -158,7 +158,7 @@ async def setup_test_schema(conn: asyncpg.Connection) -> None:
     
     await conn.execute("""
         CREATE OR REPLACE FUNCTION match_code_examples (
-          query_embedding vector(1024),
+          query_embedding vector(1536),
           match_count int DEFAULT 10,
           filter jsonb DEFAULT '{}'::jsonb,
           source_filter text DEFAULT NULL
@@ -207,12 +207,12 @@ async def clean_database(postgres_pool: asyncpg.Pool) -> None:
 
 @pytest.fixture
 def mock_embedding_service():
-    """Mock embedding service that returns 1024-dimension embeddings for PostgreSQL."""
+    """Mock embedding service that returns 1536-dimension embeddings for PostgreSQL."""
     service = Mock(spec=EmbeddingService)
-    # Make it an async mock - PostgreSQL uses 1024 dimensions
+    # Make it an async mock - PostgreSQL uses 1536 dimensions
     # Return an embedding that will match well with our test data
     async def mock_create_embedding(text):
-        return np.array([0.9] + [0.1] * 1023, dtype=np.float32)  # High similarity with test_embedding_1
+        return np.array([0.9] + [0.1] * 1535, dtype=np.float32)  # High similarity with test_embedding_1
     service.create_embedding = mock_create_embedding
     return service
 
@@ -244,10 +244,10 @@ async def insert_test_data(conn: asyncpg.Connection) -> None:
     """)
     
     # Insert test documents with embeddings that match the mock embedding service
-    # The mock always returns [0.9] + [0.1] * 1023, so use the same for test data
-    mock_embedding = np.array([0.9] + [0.1] * 1023, dtype=np.float32)
-    test_embedding_2 = np.array([0.8] + [0.1] * 1023, dtype=np.float32)  # Medium similarity  
-    test_embedding_3 = np.array([0.7] + [0.1] * 1023, dtype=np.float32)  # Lower similarity
+    # The mock always returns [0.9] + [0.1] * 1535, so use the same for test data
+    mock_embedding = np.array([0.9] + [0.1] * 1535, dtype=np.float32)
+    test_embedding_2 = np.array([0.8] + [0.1] * 1535, dtype=np.float32)  # Medium similarity  
+    test_embedding_3 = np.array([0.7] + [0.1] * 1535, dtype=np.float32)  # Lower similarity
     
     await conn.execute("""
         INSERT INTO crawled_pages (url, chunk_number, content, metadata, source_id, embedding)
@@ -313,7 +313,7 @@ async def test_search_documents_with_filters(search_service: SearchService, clea
             ON CONFLICT (source_id) DO NOTHING
         """)
         
-        test_embedding = np.array([0.9] + [0.1] * 1023, dtype=np.float32)
+        test_embedding = np.array([0.9] + [0.1] * 1535, dtype=np.float32)
         await conn.execute("""
             INSERT INTO crawled_pages (url, chunk_number, content, metadata, source_id, embedding)
             VALUES ($1, 1, $2, $3, $4, $5)
@@ -427,9 +427,9 @@ async def test_vector_similarity_calculation(clean_database, postgres_pool: asyn
         
         # Create embeddings with known relationships (convert to numpy arrays)
         # Use normalized vectors for better cosine similarity results
-        identical_embedding = np.array([1.0] + [0.0] * 1023, dtype=np.float32)
-        similar_embedding = np.array([0.99] + [0.01] * 1023, dtype=np.float32)  # Very similar
-        different_embedding = np.array([0.0] + [0.0] * 1022 + [1.0], dtype=np.float32)  # Different
+        identical_embedding = np.array([1.0] + [0.0] * 1535, dtype=np.float32)
+        similar_embedding = np.array([0.99] + [0.01] * 1535, dtype=np.float32)  # Very similar
+        different_embedding = np.array([0.0] + [0.0] * 1534 + [1.0], dtype=np.float32)  # Different
         
         await conn.execute("""
             INSERT INTO crawled_pages (url, chunk_number, content, metadata, source_id, embedding)
@@ -458,7 +458,7 @@ async def test_vector_similarity_calculation(clean_database, postgres_pool: asyn
         
         # Similar embedding should be second
         assert results[1]['url'] == "https://test.com/similar"
-        assert results[1]['similarity'] > 0.95  # Adjusted for very similar vectors
+        assert results[1]['similarity'] > 0.92  # Adjusted for very similar vectors
         
         # Different embedding should have lowest similarity
         assert results[2]['url'] == "https://test.com/different"
@@ -481,13 +481,13 @@ def test_database_url_configuration():
 
 
 def test_embedding_dimensions():
-    """Test that PostgreSQL tests use 1024-dimension embeddings."""
+    """Test that PostgreSQL tests use 1536-dimension embeddings."""
     mock_service = Mock(spec=EmbeddingService)
     async def mock_create_embedding(text):
-        return np.array([0.1] * 1024, dtype=np.float32)
+        return np.array([0.1] * 1536, dtype=np.float32)
     mock_service.create_embedding = mock_create_embedding
     
-    # Verify the mock returns 1024 dimensions
+    # Verify the mock returns 1536 dimensions
     import asyncio
     embedding = asyncio.run(mock_service.create_embedding("test"))
-    assert len(embedding) == 1024 
+    assert len(embedding) == 1536 

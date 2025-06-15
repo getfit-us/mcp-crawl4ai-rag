@@ -88,7 +88,7 @@ async def setup_test_tables(conn: asyncpg.Connection) -> None:
             content text NOT NULL,
             metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
             source_id text NOT NULL,
-            embedding vector(1024),
+            embedding vector(1536),
             created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
             
             UNIQUE(url, chunk_number),
@@ -106,7 +106,7 @@ async def setup_test_tables(conn: asyncpg.Connection) -> None:
             summary text NOT NULL,
             metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
             source_id text NOT NULL,
-            embedding vector(1024),
+            embedding vector(1536),
             created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
             
             UNIQUE(url, chunk_number),
@@ -148,8 +148,8 @@ def database_service(postgres_pool: asyncpg.Pool, test_settings) -> DatabaseServ
 @pytest.mark.asyncio
 async def test_add_documents_success(database_service: DatabaseService, clean_database) -> None:
     """Test successful document addition."""
-    # Create a test embedding (1024 dimensions to match our schema)
-    test_embedding = [0.1] * 1024
+    # Create a test embedding (1536 dimensions to match our schema)
+    test_embedding = [0.1] * 1536
     
     result = await database_service.add_documents(
         urls=["https://example.com/test"],
@@ -197,7 +197,7 @@ async def test_add_documents_multiple_batches(database_service: DatabaseService,
     urls = [f"https://example.com/test{i}" for i in range(25)]  # More than default batch size
     chunk_numbers = list(range(1, 26))
     contents = [f"Test content {i}" for i in range(25)]
-    embeddings = [[0.1] * 1024 for _ in range(25)]  # 1024 dimensions
+    embeddings = [[0.1] * 1536 for _ in range(25)]  # 1536 dimensions
     metadatas = [{"title": f"Test {i}"} for i in range(25)]
     url_to_full_document = {url: f"Full document {i}" for i, url in enumerate(urls)}
     
@@ -224,7 +224,7 @@ async def test_add_documents_multiple_batches(database_service: DatabaseService,
 @pytest.mark.asyncio
 async def test_add_documents_replaces_existing(database_service: DatabaseService, clean_database) -> None:
     """Test that adding documents replaces existing ones for the same URL."""
-    test_embedding = [0.1] * 1024  # 1024 dimensions
+    test_embedding = [0.1] * 1536  # 1536 dimensions
     url = "https://example.com/test"
     
     # Add initial document
@@ -260,7 +260,7 @@ async def test_add_documents_replaces_existing(database_service: DatabaseService
 @pytest.mark.asyncio
 async def test_add_code_examples_success(database_service: DatabaseService, clean_database) -> None:
     """Test successful code example addition."""
-    test_embedding = [0.1] * 1024  # 1024 dimensions
+    test_embedding = [0.1] * 1536  # 1536 dimensions
     
     result = await database_service.add_code_examples(
         urls=["https://example.com/test"],
@@ -360,7 +360,7 @@ async def test_get_available_sources(database_service: DatabaseService, clean_da
         )
         
         # Create documents
-        test_embedding = [0.1] * 1024  # 1024 dimensions
+        test_embedding = [0.1] * 1536  # 1536 dimensions
         for i in range(3):
             await conn.execute(
                 """INSERT INTO crawled_pages (url, chunk_number, content, metadata, source_id, embedding) 
@@ -413,9 +413,9 @@ async def test_generate_contextual_content(database_service: DatabaseService) ->
 @pytest.mark.asyncio
 async def test_database_with_real_vector_operations(database_service: DatabaseService, clean_database) -> None:
     """Test that vector operations work correctly with pgvector."""
-    # Create embeddings with different values (1024 dimensions)
-    embedding1 = [0.1] * 512 + [0.2] * 512  # 1024 dimensions
-    embedding2 = [0.2] * 512 + [0.1] * 512  # Different embedding
+    # Create embeddings with different values (1536 dimensions)
+    embedding1 = [0.1] * 768 + [0.2] * 768  # 1536 dimensions
+    embedding2 = [0.2] * 768 + [0.1] * 768  # Different embedding
     
     # Add documents with different embeddings
     await database_service.add_documents(
@@ -436,5 +436,5 @@ async def test_database_with_real_vector_operations(database_service: DatabaseSe
         emb1 = list(rows[0]["embedding"])
         emb2 = list(rows[1]["embedding"])
         assert emb1 != emb2
-        assert len(emb1) == 1024  # 1024 dimensions
-        assert len(emb2) == 1024  # 1024 dimensions 
+        assert len(emb1) == 1536  # 1536 dimensions
+        assert len(emb2) == 1536  # 1536 dimensions 

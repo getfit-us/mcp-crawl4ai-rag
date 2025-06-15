@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     
     # Embedding Configuration
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
-    embedding_dimensions: int = os.getenv("EMBEDDING_DIMENSIONS", 1024)
+    embedding_dimensions: int = os.getenv("EMBEDDING_DIMENSIONS", 1536)
     embedding_service_type: str = os.getenv("EMBEDDING_SERVICE_TYPE", "huggingface")  # "openai", "huggingface", "custom"
     custom_embedding_url: Optional[str] = os.getenv("CUSTOM_EMBEDDING_URL")  
     embedding_api_key: Optional[str] = os.getenv("EMBEDDING_API_KEY")

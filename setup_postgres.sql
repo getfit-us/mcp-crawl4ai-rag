@@ -32,7 +32,7 @@ CREATE TABLE crawled_pages (
     content text NOT NULL,
     metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     source_id text NOT NULL,
-    embedding vector(1024),
+    embedding vector(1536),
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     
     -- Add a unique constraint to prevent duplicate chunks for the same URL
@@ -60,7 +60,7 @@ CREATE TABLE code_examples (
     summary text NOT NULL,  -- Summary of the code example
     metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     source_id text NOT NULL,
-    embedding vector(1024),
+    embedding vector(1536),
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     
     -- Add a unique constraint to prevent duplicate chunks for the same URL
@@ -81,7 +81,7 @@ CREATE INDEX idx_code_examples_source_id ON code_examples (source_id);
 
 -- Create a function to search for documentation chunks
 CREATE OR REPLACE FUNCTION match_crawled_pages (
-  query_embedding vector(1024),
+  query_embedding vector(1536),
   match_count int DEFAULT 10,
   filter jsonb DEFAULT '{}'::jsonb,
   source_filter text DEFAULT NULL
@@ -117,7 +117,7 @@ $$;
 
 -- Create a function to search for code examples
 CREATE OR REPLACE FUNCTION match_code_examples (
-  query_embedding vector(1024),
+  query_embedding vector(1536),
   match_count int DEFAULT 10,
   filter jsonb DEFAULT '{}'::jsonb,
   source_filter text DEFAULT NULL
