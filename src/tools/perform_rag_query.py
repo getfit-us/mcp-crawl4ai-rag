@@ -4,10 +4,10 @@ import json
 
 from mcp.server.fastmcp import Context
 
-from crawl4ai_mcp.mcp_server import mcp
-from crawl4ai_mcp.services.search import SearchService
-from crawl4ai_mcp.utilities.reranking import Reranker
-from crawl4ai_mcp.models import CrawlContext, SearchRequest, SearchType
+from src.mcp_server import mcp
+from src.services.search import SearchService
+from src.utilities.reranking import Reranker
+from src.models import CrawlContext, SearchRequest, SearchType
 
 
 @mcp.tool()

@@ -146,7 +146,7 @@ PORT=8051
 TRANSPORT=sse
 
 # OpenAI API Configuration
-OPENAI_API_KEY=your_openai_api_key
+LLM_MODEL_API_KEY=your_openai_api_key
 # Optional: Custom base URL for OpenAI-compatible endpoints (e.g., local models, Azure OpenAI)
 # Use this for chat/completion models
 # OPENAI_BASE_URL=https://your-custom-endpoint.com/v1
@@ -367,7 +367,7 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
       "args": ["run", "crawl4ai-mcp"],
       "env": {
         "TRANSPORT": "stdio",
-        "OPENAI_API_KEY": "your_openai_api_key",
+        "LLM_MODEL_API_KEY": "your_openai_api_key",
         "OPENAI_BASE_URL": "https://your-custom-endpoint.com/v1",
         "OPENAI_ORGANIZATION": "your_org_id",
         "SUMMARY_LLM_MODEL": "gpt-4o-mini",
@@ -403,7 +403,7 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
       "command": "docker",
       "args": ["run", "--rm", "-i", 
                "-e", "TRANSPORT", 
-               "-e", "OPENAI_API_KEY", 
+               "-e", "LLM_MODEL_API_KEY", 
                "-e", "OPENAI_BASE_URL",
                "-e", "OPENAI_ORGANIZATION",
                "-e", "SUMMARY_LLM_MODEL",
@@ -427,7 +427,7 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
                "mcp/crawl4ai-rag"],
       "env": {
         "TRANSPORT": "stdio",
-        "OPENAI_API_KEY": "your_openai_api_key",
+        "LLM_MODEL_API_KEY": "your_openai_api_key",
         "OPENAI_BASE_URL": "https://your-custom-endpoint.com/v1",
         "OPENAI_ORGANIZATION": "your_org_id",
         "SUMMARY_LLM_MODEL": "gpt-4o-mini",

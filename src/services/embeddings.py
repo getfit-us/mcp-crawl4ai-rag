@@ -6,7 +6,7 @@ from typing import Any, Callable, List, Optional, Tuple
 
 import openai
 
-from crawl4ai_mcp.config import get_settings
+from src.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class EmbeddingService:
         Args:
             settings: Application settings (optional)
         """
-        self.settings =  get_settings()
+        self.settings = settings or get_settings()
         
         # Initialize OpenAI client for chat completions
         chat_client_kwargs = {"api_key": self.settings.openai_api_key}
@@ -33,11 +33,8 @@ class EmbeddingService:
         self.client = openai.OpenAI(**chat_client_kwargs)
 
         # Initialize a separate client for embeddings
-        embedding_client_kwargs = {"api_key": self.settings.openai_api_key}
-        if self.settings.custom_embedding_url:
-            embedding_client_kwargs["base_url"] = self.settings.custom_embedding_url
-        elif self.settings.openai_base_url:
-            embedding_client_kwargs["base_url"] = self.settings.openai_base_url
+        embedding_client_kwargs = {"api_key": self.settings.embedding_api_key}
+        embedding_client_kwargs["base_url"] = self.settings.custom_embedding_url
         if self.settings.openai_organization:
             embedding_client_kwargs["organization"] = self.settings.openai_organization
         

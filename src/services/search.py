@@ -5,9 +5,9 @@ import logging
 from typing import Any, Dict, List, Optional
 
 import asyncpg
-from crawl4ai_mcp.config import get_settings
-from crawl4ai_mcp.models import SearchRequest, SearchResult, SearchResponse, SearchType
-from crawl4ai_mcp.services.embeddings import EmbeddingService
+from src.config import get_settings
+from src.models import SearchRequest, SearchResult, SearchResponse, SearchType
+from src.services.embeddings import EmbeddingService
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +52,8 @@ class SearchService:
         try:
             # Create embedding for the query
             query_embedding = await self.embedding_service.create_embedding(query)
+            # Debugging: Print the embedding dimensions
+            logger.info(f"Created query embedding: {len(query_embedding)}")
         except Exception as e:
             logger.error(f"Error creating query embedding: {e}")
             return []
@@ -63,7 +65,7 @@ class SearchService:
                     "SELECT * FROM match_crawled_pages($1, $2, $3, $4)",
                     query_embedding,
                     match_count,
-                    json.dumps(filter_metadata) if filter_metadata else '{}',
+                    filter_metadata if filter_metadata else {},
                     source_id
                 )
                 
@@ -132,7 +134,7 @@ class SearchService:
                     "SELECT * FROM match_code_examples($1, $2, $3, $4)",
                     query_embedding,
                     match_count,
-                    json.dumps(filter_metadata) if filter_metadata else '{}',
+                    filter_metadata if filter_metadata else {},
                     source_id
                 )
                 

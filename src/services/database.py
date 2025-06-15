@@ -5,8 +5,8 @@ import logging
 from typing import Any, Dict, List, Optional
 
 import asyncpg
-from crawl4ai_mcp.config import get_settings
-from crawl4ai_mcp.models import SourceInfo
+from src.config import get_settings
+from src.models import SourceInfo
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,29 @@ class DatabaseService:
         # Get unique URLs to delete existing records
         unique_urls = list(set(urls))
         
+        # Extract unique source domains
+        from urllib.parse import urlparse
+        unique_sources = list(set([urlparse(url).netloc for url in unique_urls]))
+        
         async with self.pool.acquire() as conn:
+            # Create source records if they don't exist
+            try:
+                for source_id in unique_sources:
+                    await conn.execute(
+                        """
+                        INSERT INTO sources (source_id, summary, total_word_count)
+                        VALUES ($1, $2, $3)
+                        ON CONFLICT (source_id) DO NOTHING
+                        """,
+                        source_id, f"Auto-created source for {source_id}", 0
+                    )
+            except Exception as e:
+                return {
+                    "success": False,
+                    "error": f"Failed to create source records: {str(e)}",
+                    "count": 0
+                }
+            
             # Delete existing records for these URLs
             try:
                 if unique_urls:
@@ -80,7 +102,6 @@ class DatabaseService:
                 batch_metadatas = metadatas[i:i + batch_size]
                 
                 # Extract source domains
-                from urllib.parse import urlparse
                 batch_sources = [urlparse(url).netloc for url in batch_urls]
                 
                 # Prepare batch data for insertion
@@ -142,9 +163,31 @@ class DatabaseService:
         if not urls:
             return {"success": True, "count": 0}
         
+        # Extract unique source domains
+        from urllib.parse import urlparse
+        unique_urls = list(set(urls))
+        unique_sources = list(set([urlparse(url).netloc for url in unique_urls]))
+        
         async with self.pool.acquire() as conn:
+            # Create source records if they don't exist
+            try:
+                for source_id in unique_sources:
+                    await conn.execute(
+                        """
+                        INSERT INTO sources (source_id, summary, total_word_count)
+                        VALUES ($1, $2, $3)
+                        ON CONFLICT (source_id) DO NOTHING
+                        """,
+                        source_id, f"Auto-created source for {source_id}", 0
+                    )
+            except Exception as e:
+                return {
+                    "success": False,
+                    "error": f"Failed to create source records: {str(e)}",
+                    "count": 0
+                }
+            
             # Delete existing records for these URLs
-            unique_urls = list(set(urls))
             for url in unique_urls:
                 try:
                     await conn.execute("DELETE FROM code_examples WHERE url = $1", url)
@@ -164,7 +207,6 @@ class DatabaseService:
                 batch_metadatas = metadatas[i:i + batch_size]
                 
                 # Extract source domains
-                from urllib.parse import urlparse
                 batch_sources = [urlparse(url).netloc for url in batch_urls]
                 
                 # Prepare batch data
@@ -265,7 +307,7 @@ class DatabaseService:
         """
         async with self.pool.acquire() as conn:
             try:
-                # Get sources with document counts
+                # Get sources with document counts (using subqueries to avoid Cartesian product issues)
                 sources_query = """
                     SELECT 
                         s.source_id,
@@ -273,13 +315,25 @@ class DatabaseService:
                         s.total_word_count,
                         s.updated_at,
                         s.created_at,
-                        COUNT(DISTINCT cp.url) as doc_count,
-                        COUNT(cp.id) as chunk_count,
-                        COUNT(ce.id) as code_count
+                        COALESCE(cp_stats.doc_count, 0) as doc_count,
+                        COALESCE(cp_stats.chunk_count, 0) as chunk_count,
+                        COALESCE(ce_stats.code_count, 0) as code_count
                     FROM sources s
-                    LEFT JOIN crawled_pages cp ON s.source_id = cp.source_id
-                    LEFT JOIN code_examples ce ON s.source_id = ce.source_id
-                    GROUP BY s.source_id, s.summary, s.total_word_count, s.updated_at, s.created_at
+                    LEFT JOIN (
+                        SELECT 
+                            source_id,
+                            COUNT(DISTINCT url) as doc_count,
+                            COUNT(id) as chunk_count
+                        FROM crawled_pages
+                        GROUP BY source_id
+                    ) cp_stats ON s.source_id = cp_stats.source_id
+                    LEFT JOIN (
+                        SELECT 
+                            source_id,
+                            COUNT(DISTINCT url) as code_count
+                        FROM code_examples
+                        GROUP BY source_id
+                    ) ce_stats ON s.source_id = ce_stats.source_id
                 """
                 
                 rows = await conn.fetch(sources_query)

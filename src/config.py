@@ -17,14 +17,14 @@ class Settings(BaseSettings):
     port: int = os.getenv("PORT", 8051)
     transport: str = os.getenv("TRANSPORT", "sse")  # Server-Sent Events
     
-    # OpenAI Configuration - REQUIRED
-    openai_api_key: str = os.getenv("OPENAI_API_KEY")
+    # LLM Configuration - REQUIRED
+    openai_api_key: str = os.getenv("LLM_MODEL_API_KEY", "test-key")
     openai_base_url: Optional[str] = os.getenv("SUMMARY_LLM_BASE_URL")  # Custom base URL for OpenAI-compatible endpoints
     openai_organization: Optional[str] = os.getenv("OPENAI_ORGANIZATION")  # Organization ID for OpenAI
     summary_llm_model: str = os.getenv("SUMMARY_LLM_MODEL", "gpt-4o-mini")
     
     
-    # PostgreSQL Configuration - REQUIRED
+    # PostgreSQL Configuration - REQUIRED if using Local Postgres instead of Supabase
     postgres_host: str = os.getenv("POSTGRES_HOST", "localhost")
     postgres_port: int = os.getenv("POSTGRES_PORT", 5432)
     postgres_db: str = os.getenv("POSTGRES_DB", "crawl4ai_rag")
@@ -49,11 +49,15 @@ class Settings(BaseSettings):
     default_semantic_threshold: float = 0.5
     default_rerank_threshold: float = 0.3
     
-    # Model Configuration
+    # Embedding Configuration
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
     embedding_dimensions: int = os.getenv("EMBEDDING_DIMENSIONS", 1024)
     embedding_service_type: str = os.getenv("EMBEDDING_SERVICE_TYPE", "huggingface")  # "openai", "huggingface", "custom"
-    custom_embedding_url: Optional[str] = os.getenv("CUSTOM_EMBEDDING_URL")  # For custom embedding endpoints
+    custom_embedding_url: Optional[str] = os.getenv("CUSTOM_EMBEDDING_URL")  
+    embedding_api_key: Optional[str] = os.getenv("EMBEDDING_API_KEY")
+    embedding_organization: Optional[str] = os.getenv("EMBEDDING_ORGANIZATION")
+    
+    # Reranking Configuration
     reranker_model: str = os.getenv("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
     custom_reranker_url: Optional[str] = os.getenv("CUSTOM_RERANKER_URL", None)  # For custom reranking model URLs
     reranker_model_local_path: Optional[str] = os.getenv("RERANKER_MODEL_LOCAL_PATH", None)  
@@ -67,7 +71,7 @@ class Settings(BaseSettings):
     def validate_required_fields(self) -> None:
         """Validate that all required fields are set."""
         if not self.openai_api_key:
-            raise ValueError("OPENAI_API_KEY is required")
+            raise ValueError("LLM_MODEL_API_KEY is required")
         if not self.postgres_user:
             raise ValueError("POSTGRES_USER is required")
         if not self.postgres_password:
