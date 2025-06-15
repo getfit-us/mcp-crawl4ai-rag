@@ -16,7 +16,43 @@ DROP TABLE IF EXISTS code_examples;
 DROP TABLE IF EXISTS sources;
 
 -- Create the sources table
-CREATE TABLE sources (
+-- Create function for crawled_pages
+CREATE OR REPLACE FUNCTION match_crawled_pages (
+  query_embedding vector(1024),
+  match_count int DEFAULT 10,
+  filter jsonb DEFAULT '{}'::jsonb,
+  source_filter text DEFAULT NULL
+) RETURNS TABLE (
+  id bigint,
+  url varchar,
+  chunk_number integer,
+  content text,
+  metadata jsonb,
+  source_id text,
+  similarity float
+) LANGUAGE plpgsql
+AS $
+#variable_conflict use_column
+BEGIN
+  RETURN QUERY
+  SELECT
+    id,
+    url,
+    chunk_number,
+    content,
+    metadata,
+    source_id,
+    1 - (crawled_pages.embedding <=> query_embedding) AS similarity
+  FROM crawled_pages
+  WHERE metadata @> filter
+    AND (source_filter IS NULL OR source_id = source_filter)
+  ORDER BY embedding <=> query_embedding
+  LIMIT match_count;
+END;
+$;
+
+-- Create table after function
+CREATE TABLE sources ( (
     source_id text PRIMARY KEY,
     summary text,
     total_word_count integer DEFAULT 0,
