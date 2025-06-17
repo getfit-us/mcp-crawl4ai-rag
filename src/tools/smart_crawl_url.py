@@ -260,21 +260,23 @@ async def smart_crawl_url(
                         # Prepare chunks with documents for batch processing
                         chunks_with_docs = [(chunk, markdown_content) for chunk in chunks]
                         
-                        # Process all contextual embeddings in a single batch call for better parallelization
+                        # Process all contextual embeddings in a single batch call
                         contextual_results = await embedding_service.generate_contextual_embeddings_batch(chunks_with_docs)
                         
                         # Get embeddings for contextual content
                         contextual_texts = [result[0] for result in contextual_results]
                         if settings.enable_batch_embeddings:
-                            # Process all embeddings in a single batch call for better parallelization
                             logger.info(f"Creating embeddings for {len(contextual_texts)} contextual texts in single batch")
                             embeddings = await embedding_service.create_embeddings_batch(contextual_texts)
                         else:
+                            # Process individually if batch embeddings disabled
+                            embeddings = []
                             for contextual_text in contextual_texts:
                                 embedding = await embedding_service.create_embedding(contextual_text)
                                 embeddings.append(embedding)
                     else:
-                        # Process individually
+                        # Process individually when batch not enabled or single chunk
+                        embeddings = []
                         for chunk in chunks:
                             contextual_content, _ = await text_processor.generate_contextual_embedding(
                                 markdown_content, chunk
@@ -284,10 +286,10 @@ async def smart_crawl_url(
                 else:
                     if settings.enable_batch_embeddings and len(chunks) > 1:
                         logger.info(f"Creating embeddings for {len(chunks)} chunks from {result_url} in single batch")
-                        # Process all embeddings in a single batch call for better parallelization
                         embeddings = await embedding_service.create_embeddings_batch(chunks)
                     else:
-                        # Process individually
+                        # Process individually when batch not enabled or single chunk
+                        embeddings = []
                         for chunk in chunks:
                             embedding = await embedding_service.create_embedding(chunk)
                             embeddings.append(embedding)
@@ -340,10 +342,11 @@ async def smart_crawl_url(
                                 for code_block in code_blocks
                             ]
                             
-                            # Process all summaries in a single batch call for better parallelization
+                            # Process all summaries in a single batch call
                             code_summaries = await crawling_service.generate_code_example_summaries_batch(code_examples_data)
                         else:
-                            # Process summaries individually
+                            # Process summaries individually when batch not enabled or single code block
+                            code_summaries = []
                             for code_block in code_blocks:
                                 summary = await crawling_service.generate_code_example_summary(
                                     code_block['code'],
@@ -358,10 +361,10 @@ async def smart_crawl_url(
                         
                         if settings.enable_batch_embeddings and len(embedding_texts) > 1:
                             logger.info(f"Creating embeddings for {len(embedding_texts)} code examples from {result_url} in single batch")
-                            # Process all embeddings in a single batch call for better parallelization
                             code_embeddings = await embedding_service.create_embeddings_batch(embedding_texts)
                         else:
-                            # Process embeddings individually
+                            # Process embeddings individually when batch not enabled or single code example
+                            code_embeddings = []
                             for embedding_text in embedding_texts:
                                 embedding = await embedding_service.create_embedding(embedding_text)
                                 code_embeddings.append(embedding)
