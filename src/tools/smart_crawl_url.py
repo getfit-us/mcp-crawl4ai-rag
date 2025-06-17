@@ -3,6 +3,7 @@
 import json
 import logging
 from urllib.parse import urlparse
+import asyncio
 
 from mcp.server.fastmcp import Context
 
@@ -253,23 +254,36 @@ async def smart_crawl_url(
                         # Prepare chunks with documents for batch processing
                         chunks_with_docs = [(chunk, markdown_content) for chunk in chunks]
                         
-                        # Process in batches
+                        # Process in batches - PARALLEL INSTEAD OF SEQUENTIAL
                         batch_size = settings.contextual_embedding_batch_size
-                        contextual_results = []
+                        contextual_tasks = []
                         
                         for i in range(0, len(chunks_with_docs), batch_size):
                             batch = chunks_with_docs[i:i + batch_size]
-                            batch_results = await embedding_service.generate_contextual_embeddings_batch(batch)
-                            contextual_results.extend(batch_results)
+                            task = embedding_service.generate_contextual_embeddings_batch(batch)
+                            contextual_tasks.append(task)
+                        
+                        # Execute all contextual embedding batches in parallel
+                        contextual_batch_results = await asyncio.gather(*contextual_tasks)
+                        contextual_results = []
+                        for batch_result in contextual_batch_results:
+                            contextual_results.extend(batch_result)
                         
                         # Get embeddings for contextual content
                         contextual_texts = [result[0] for result in contextual_results]
                         if settings.enable_batch_embeddings:
-                            # Process embeddings in batches
+                            # Process embeddings in batches - PARALLEL INSTEAD OF SEQUENTIAL
                             embedding_batch_size = settings.embedding_batch_size
+                            embedding_tasks = []
+                            
                             for i in range(0, len(contextual_texts), embedding_batch_size):
                                 batch_texts = contextual_texts[i:i + embedding_batch_size]
-                                batch_embeddings = await embedding_service.create_embeddings_batch(batch_texts)
+                                task = embedding_service.create_embeddings_batch(batch_texts)
+                                embedding_tasks.append(task)
+                            
+                            # Execute all embedding batches in parallel
+                            embedding_batch_results = await asyncio.gather(*embedding_tasks)
+                            for batch_embeddings in embedding_batch_results:
                                 embeddings.extend(batch_embeddings)
                         else:
                             for contextual_text in contextual_texts:
@@ -286,11 +300,18 @@ async def smart_crawl_url(
                 else:
                     if settings.enable_batch_embeddings and len(chunks) > 1:
                         logger.info(f"Using batch embeddings for {len(chunks)} chunks")
-                        # Process embeddings in batches
+                        # Process embeddings in batches - PARALLEL INSTEAD OF SEQUENTIAL
                         batch_size = settings.embedding_batch_size
+                        embedding_tasks = []
+                        
                         for i in range(0, len(chunks), batch_size):
                             batch_chunks = chunks[i:i + batch_size]
-                            batch_embeddings = await embedding_service.create_embeddings_batch(batch_chunks)
+                            task = embedding_service.create_embeddings_batch(batch_chunks)
+                            embedding_tasks.append(task)
+                        
+                        # Execute all embedding batches in parallel
+                        embedding_batch_results = await asyncio.gather(*embedding_tasks)
+                        for batch_embeddings in embedding_batch_results:
                             embeddings.extend(batch_embeddings)
                     else:
                         # Process individually
@@ -345,11 +366,18 @@ async def smart_crawl_url(
                                 for code_block in code_blocks
                             ]
                             
-                            # Process summaries in batches
+                            # Process summaries in batches - PARALLEL INSTEAD OF SEQUENTIAL
                             batch_size = settings.summary_batch_size
+                            summary_tasks = []
+                            
                             for i in range(0, len(code_examples_data), batch_size):
                                 batch_data = code_examples_data[i:i + batch_size]
-                                batch_summaries = await crawling_service.generate_code_example_summaries_batch(batch_data)
+                                task = crawling_service.generate_code_example_summaries_batch(batch_data)
+                                summary_tasks.append(task)
+                            
+                            # Execute all summary batches in parallel
+                            summary_batch_results = await asyncio.gather(*summary_tasks)
+                            for batch_summaries in summary_batch_results:
                                 code_summaries.extend(batch_summaries)
                         else:
                             # Process summaries individually
@@ -367,11 +395,18 @@ async def smart_crawl_url(
                         
                         if settings.enable_batch_embeddings and len(embedding_texts) > 1:
                             logger.info(f"Using batch embeddings for {len(embedding_texts)} code examples")
-                            # Process embeddings in batches
+                            # Process embeddings in batches - PARALLEL INSTEAD OF SEQUENTIAL
                             batch_size = settings.embedding_batch_size
+                            embedding_tasks = []
+                            
                             for i in range(0, len(embedding_texts), batch_size):
                                 batch_texts = embedding_texts[i:i + batch_size]
-                                batch_embeddings = await embedding_service.create_embeddings_batch(batch_texts)
+                                task = embedding_service.create_embeddings_batch(batch_texts)
+                                embedding_tasks.append(task)
+                            
+                            # Execute all embedding batches in parallel
+                            embedding_batch_results = await asyncio.gather(*embedding_tasks)
+                            for batch_embeddings in embedding_batch_results:
                                 code_embeddings.extend(batch_embeddings)
                         else:
                             # Process embeddings individually

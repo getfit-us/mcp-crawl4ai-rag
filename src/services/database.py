@@ -1,5 +1,6 @@
 """Database service for PostgreSQL operations with pgvector."""
 
+import asyncio
 import json
 import logging
 from typing import Any, Dict, List, Optional
@@ -90,7 +91,7 @@ class DatabaseService:
                     "count": 0
                 }
             
-            # Process documents in batches
+            # Insert documents in batches
             total_documents = len(urls)
             documents_added = 0
             

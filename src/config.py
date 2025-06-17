@@ -60,9 +60,9 @@ class Settings(BaseSettings):
     # Batch Processing Configuration
     enable_batch_embeddings: bool = os.getenv("ENABLE_BATCH_EMBEDDINGS", "true") == "true"
     embedding_batch_size: int = int(os.getenv("EMBEDDING_BATCH_SIZE", "100"))
-    enable_batch_summaries: bool = os.getenv("ENABLE_BATCH_SUMMARIES", "false") == "true"
+    enable_batch_summaries: bool = os.getenv("ENABLE_BATCH_SUMMARIES", "true") == "true"
     summary_batch_size: int = int(os.getenv("SUMMARY_BATCH_SIZE", "10"))
-    enable_batch_contextual_embeddings: bool = os.getenv("ENABLE_BATCH_CONTEXTUAL_EMBEDDINGS", "false") == "true"
+    enable_batch_contextual_embeddings: bool = os.getenv("ENABLE_BATCH_CONTEXTUAL_EMBEDDINGS", "true") == "true"
     contextual_embedding_batch_size: int = int(os.getenv("CONTEXTUAL_EMBEDDING_BATCH_SIZE", "20"))
     
     # Reranking Configuration
