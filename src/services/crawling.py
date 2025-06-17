@@ -8,6 +8,7 @@ import uuid
 from typing import Any, Dict, List, Optional, Set, Tuple
 from urllib.parse import urlparse, urldefrag
 from xml.etree import ElementTree
+import re
 
 from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode, MemoryAdaptiveDispatcher
 
@@ -39,7 +40,10 @@ class CrawlingService:
         """
         self.crawler = crawler
         self.settings = settings or get_settings()
-        self.embedding_service =  EmbeddingService(self.settings)
+        if embedding_service:
+            self.embedding_service = embedding_service
+        else:
+            self.embedding_service = EmbeddingService(self.settings)
         
         # Cancellation tracking
         self._active_crawls: Dict[str, Dict[str, Any]] = {}
@@ -421,6 +425,263 @@ class CrawlingService:
             i += 2
         
         return code_blocks
+
+    def extract_complete_code_sections(self, markdown_content: str, max_section_size: int = 4800) -> List[Dict[str, Any]]:
+        """
+        Extract complete sections containing code blocks, keeping related content together.
+        Optimized for RAG chunking by respecting size limits while maximizing coherent content.
+        
+        Args:
+            markdown_content: The markdown content to extract sections from
+            max_section_size: Maximum size of each section (default: 4800 to leave room for metadata)
+            
+        Returns:
+            List of dictionaries containing complete sections with code and context
+        """
+        sections = []
+        
+        # Find all code block positions first
+        code_block_positions = self._find_all_code_block_positions(markdown_content)
+        if not code_block_positions:
+            return []
+        
+        # Group nearby code blocks into sections
+        section_groups = self._group_code_blocks_into_sections(code_block_positions, markdown_content)
+        
+        for group in section_groups:
+            section = self._extract_section_with_smart_boundaries(
+                markdown_content, group, max_section_size
+            )
+            if section and len(section['content']) >= 500:  # Minimum section size
+                sections.append(section)
+        
+        return sections
+    
+    def _find_all_code_block_positions(self, content: str) -> List[Dict[str, Any]]:
+        """Find all code block positions and metadata."""
+        positions = []
+        
+        # Find triple backtick blocks
+        start_offset = 3 if content.strip().startswith('```') else 0
+        pos = start_offset
+        
+        while True:
+            start_pos = content.find('```', pos)
+            if start_pos == -1:
+                break
+            
+            end_pos = content.find('```', start_pos + 3)
+            if end_pos == -1:
+                break
+            
+            # Extract language and code
+            code_section = content[start_pos+3:end_pos]
+            lines = code_section.split('\n', 1)
+            if len(lines) > 1 and lines[0].strip() and ' ' not in lines[0].strip():
+                language = lines[0].strip()
+                code_content = lines[1] if len(lines) > 1 else ""
+            else:
+                language = ""
+                code_content = code_section
+            
+            # Only include substantial code blocks
+            if len(code_content.strip()) >= 100:
+                positions.append({
+                    'start': start_pos,
+                    'end': end_pos + 3,
+                    'language': language,
+                    'code_length': len(code_content.strip()),
+                    'is_js_like': self._is_javascript_like(language, code_content)
+                })
+            
+            pos = end_pos + 3
+        
+        return positions
+    
+    def _is_javascript_like(self, language: str, code: str) -> bool:
+        """Check if code is JavaScript/TypeScript/React related."""
+        js_languages = {'javascript', 'js', 'typescript', 'ts', 'jsx', 'tsx', 'react'}
+        if language.lower() in js_languages:
+            return True
+        
+        # Pattern-based detection for unlabeled code
+        js_patterns = [
+            r'import\s+.*from\s+[\'"]',
+            r'export\s+(default\s+)?',
+            r'useState\s*\(',
+            r'useEffect\s*\(',
+            r'function\s+\w+\s*\(',
+            r'const\s+\w+\s*=\s*\(',
+            r'=>\s*{',
+            r'<\w+.*>.*</\w+>',  # JSX
+        ]
+        
+        return any(re.search(pattern, code) for pattern in js_patterns)
+    
+    def _group_code_blocks_into_sections(self, positions: List[Dict[str, Any]], content: str) -> List[List[Dict[str, Any]]]:
+        """Group nearby code blocks into logical sections."""
+        if not positions:
+            return []
+        
+        groups = []
+        current_group = [positions[0]]
+        
+        for i in range(1, len(positions)):
+            prev_block = positions[i-1]
+            curr_block = positions[i]
+            
+            # Calculate distance between blocks
+            distance = curr_block['start'] - prev_block['end']
+            
+            # Check if blocks should be grouped together
+            should_group = (
+                distance < 2000 or  # Close proximity
+                self._blocks_are_related(prev_block, curr_block, content) or
+                self._in_same_documentation_section(prev_block, curr_block, content)
+            )
+            
+            if should_group:
+                current_group.append(curr_block)
+            else:
+                groups.append(current_group)
+                current_group = [curr_block]
+        
+        groups.append(current_group)
+        return groups
+    
+    def _blocks_are_related(self, block1: Dict[str, Any], block2: Dict[str, Any], content: str) -> bool:
+        """Check if two code blocks are related."""
+        # Same language
+        if block1['language'] == block2['language'] and block1['language']:
+            return True
+        
+        # Both JavaScript-like
+        if block1['is_js_like'] and block2['is_js_like']:
+            return True
+        
+        # Check content between blocks for continuation indicators
+        between_content = content[block1['end']:block2['start']]
+        continuation_patterns = [
+            r'then\s*:',
+            r'next\s*:',
+            r'also\s*:',
+            r'similarly\s*:',
+            r'example\s*\d+',
+            r'step\s*\d+',
+        ]
+        
+        return any(re.search(pattern, between_content, re.IGNORECASE) for pattern in continuation_patterns)
+    
+    def _in_same_documentation_section(self, block1: Dict[str, Any], block2: Dict[str, Any], content: str) -> bool:
+        """Check if blocks are in the same documentation section."""
+        # Look for markdown headers between blocks
+        between_content = content[block1['end']:block2['start']]
+        
+        # Count major headers (# or ##)
+        major_headers = len(re.findall(r'^#{1,2}\s+', between_content, re.MULTILINE))
+        
+        return major_headers == 0  # No major section breaks
+    
+    def _extract_section_with_smart_boundaries(
+        self, 
+        content: str, 
+        code_blocks: List[Dict[str, Any]], 
+        max_size: int
+    ) -> Optional[Dict[str, Any]]:
+        """Extract a section with smart boundary detection."""
+        if not code_blocks:
+            return None
+        
+        # Initial boundaries
+        section_start = code_blocks[0]['start']
+        section_end = code_blocks[-1]['end']
+        
+        # Expand backwards to include relevant documentation
+        section_start = self._find_section_start(content, section_start, max_size // 3)
+        
+        # Expand forwards to include relevant documentation  
+        section_end = self._find_section_end(content, section_end, max_size // 3)
+        
+        # Extract the section
+        section_content = content[section_start:section_end]
+        
+        # Trim if too large
+        if len(section_content) > max_size:
+            section_content = self._trim_section_intelligently(section_content, max_size)
+        
+        # Determine primary language
+        languages = [block['language'] for block in code_blocks if block['language']]
+        primary_language = max(set(languages), key=languages.count) if languages else ""
+        
+        return {
+            'content': section_content,
+            'code_blocks_count': len(code_blocks),
+            'primary_language': primary_language,
+            'is_js_like': any(block['is_js_like'] for block in code_blocks),
+            'total_code_length': sum(block['code_length'] for block in code_blocks),
+            'section_start': section_start,
+            'section_end': section_end
+        }
+    
+    def _find_section_start(self, content: str, start_pos: int, max_expansion: int) -> int:
+        """Find the logical start of a section."""
+        search_start = max(0, start_pos - max_expansion)
+        section_content = content[search_start:start_pos]
+        
+        # Look for section boundaries (headers, horizontal rules)
+        lines = section_content.split('\n')
+        
+        for i in range(len(lines) - 1, -1, -1):
+            line = lines[i].strip()
+            
+            # Major header
+            if re.match(r'^#{1,3}\s+', line):
+                return search_start + sum(len(l) + 1 for l in lines[:i])
+            
+            # Horizontal rule
+            if re.match(r'^-{3,}|^\*{3,}|^_{3,}', line):
+                return search_start + sum(len(l) + 1 for l in lines[:i+1])
+        
+        return search_start
+    
+    def _find_section_end(self, content: str, end_pos: int, max_expansion: int) -> int:
+        """Find the logical end of a section."""
+        search_end = min(len(content), end_pos + max_expansion)
+        section_content = content[end_pos:search_end]
+        
+        # Look for section boundaries
+        lines = section_content.split('\n')
+        
+        for i, line in enumerate(lines):
+            line = line.strip()
+            
+            # Major header (start of new section)
+            if re.match(r'^#{1,3}\s+', line) and i > 5:  # Allow some buffer
+                return end_pos + sum(len(l) + 1 for l in lines[:i])
+            
+            # Horizontal rule
+            if re.match(r'^-{3,}|^\*{3,}|^_{3,}', line) and i > 5:
+                return end_pos + sum(len(l) + 1 for l in lines[:i])
+        
+        return search_end
+    
+    def _trim_section_intelligently(self, content: str, max_size: int) -> str:
+        """Trim section while preserving important content."""
+        if len(content) <= max_size:
+            return content
+        
+        # Try to trim from the end first, stopping at natural boundaries
+        lines = content.split('\n')
+        total_length = 0
+        keep_lines = []
+        
+        for line in lines:
+            if total_length + len(line) + 1 > max_size:
+                break
+            keep_lines.append(line)
+            total_length += len(line) + 1
+        
+        return '\n'.join(keep_lines)
     
     async def generate_code_example_summary(
         self, 

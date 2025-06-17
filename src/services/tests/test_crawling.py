@@ -387,3 +387,77 @@ class TestSourceSummary:
         )
         
         assert summary == "Content from test-lib"
+
+    def test_extract_complete_code_sections(self, crawling_service) -> None:
+        """Test extracting complete code sections optimized for RAG chunking."""
+        markdown = """
+# JavaScript Examples
+
+Here are some useful JavaScript patterns:
+
+```javascript
+function greetUser(name) {
+    console.log(`Hello, ${name}!`);
+    return `Welcome, ${name}`;
+}
+```
+
+This function demonstrates basic string interpolation.
+
+```javascript
+const fetchData = async (url) => {
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Fetch error:', error);
+        throw error;
+    }
+};
+```
+
+The above shows error handling with async/await.
+
+## React Component Example
+
+Here's a React component:
+
+```jsx
+import React, { useState } from 'react';
+
+const Counter = () => {
+    const [count, setCount] = useState(0);
+    
+    return (
+        <div>
+            <p>Count: {count}</p>
+            <button onClick={() => setCount(count + 1)}>
+                Increment
+            </button>
+        </div>
+    );
+};
+
+export default Counter;
+```
+
+This demonstrates React hooks usage.
+"""
+        
+        sections = crawling_service.extract_complete_code_sections(markdown, max_section_size=2000)
+        
+        # Should group related JS/React code together
+        assert len(sections) >= 1
+        
+        # Check that sections contain meaningful content
+        for section in sections:
+            assert 'content' in section
+            assert 'code_blocks_count' in section  
+            assert 'is_js_like' in section
+            assert section['code_blocks_count'] > 0
+            assert len(section['content']) <= 2000  # Respects max size
+            assert len(section['content']) >= 500   # Meets minimum size
+            
+        # At least one section should be JavaScript-like
+        assert any(section['is_js_like'] for section in sections)
