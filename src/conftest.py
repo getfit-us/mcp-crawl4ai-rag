@@ -46,6 +46,7 @@ def test_settings() -> Any:
         postgres_user="test_user",
         postgres_password="test_password",
         postgres_sslmode="prefer",
+        disable_thinking=False,
     )
 
 
@@ -144,3 +145,38 @@ async def async_iterator(items: list[Any]) -> AsyncIterator[Any]:
     """Create an async iterator from a list of items."""
     for item in items:
         yield item
+
+
+@pytest.fixture
+def mock_postgres_pool() -> Mock:
+    """Mock PostgreSQL pool for testing DatabaseService and SearchService."""
+    from unittest.mock import AsyncMock
+    
+    # Create a mock connection
+    mock_conn = Mock()
+    mock_conn.execute = AsyncMock()
+    mock_conn.executemany = AsyncMock()
+    mock_conn.fetchrow = AsyncMock()
+    mock_conn.fetch = AsyncMock()
+    
+    # Create a mock pool that supports async context manager
+    mock_pool = Mock()
+    
+    # Create an async context manager for acquire()
+    class MockAsyncContextManager:
+        def __init__(self, conn):
+            self.conn = conn
+        
+        async def __aenter__(self):
+            return self.conn
+        
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+    
+    # Make acquire() return the context manager
+    mock_pool.acquire.return_value = MockAsyncContextManager(mock_conn)
+    
+    # Store reference to connection for easy access in tests
+    mock_pool._mock_conn = mock_conn
+    
+    return mock_pool

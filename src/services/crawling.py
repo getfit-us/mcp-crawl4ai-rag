@@ -204,6 +204,20 @@ class CrawlingService:
         """
         return text.replace("<think>", "").replace("</think>", "")
     
+    def _prepare_prompt_with_thinking_control(self, prompt: str) -> str:
+        """
+        Prepare prompt with /no_think prefix if thinking is disabled.
+        
+        Args:
+            prompt: The original prompt text
+            
+        Returns:
+            The prompt with /no_think prefix if disable_thinking is True
+        """
+        if self.settings.disable_thinking:
+            return f"/no_think\n\n{prompt}"
+        return prompt
+    
     async def crawl_markdown_file(self, url: str, crawl_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Crawl a .txt or markdown file.
@@ -723,7 +737,7 @@ Based on the code example and its surrounding context, provide a concise summary
                     model=self.settings.summary_llm_model,
                     messages=[
                         {"role": "system", "content": "You are a helpful assistant that provides concise code example summaries."},
-                        {"role": "user", "content": prompt}
+                        {"role": "user", "content": self._prepare_prompt_with_thinking_control(prompt)}
                     ],
                     temperature=0.3,
                     max_tokens=4000
@@ -781,7 +795,7 @@ The above content is from the documentation for '{source_id}'. Please provide a 
                     model=self.settings.summary_llm_model,
                     messages=[
                         {"role": "system", "content": "You are a helpful assistant that provides concise library/tool/framework summaries."},
-                        {"role": "user", "content": prompt}
+                        {"role": "user", "content": self._prepare_prompt_with_thinking_control(prompt)}
                     ],
                     temperature=0.3,
                     max_tokens=4000
@@ -852,7 +866,7 @@ Based on the code example and its surrounding context, provide a concise summary
                         model=self.settings.summary_llm_model,
                         messages=[
                             {"role": "system", "content": "You are a helpful assistant that provides concise code example summaries."},
-                            {"role": "user", "content": p}
+                            {"role": "user", "content": self._prepare_prompt_with_thinking_control(p)}
                         ],
                         temperature=0.3,
                         max_tokens=4000
@@ -935,7 +949,7 @@ The above content is from the documentation for '{source_id}'. Please provide a 
                             model=self.settings.summary_llm_model,
                             messages=[
                                 {"role": "system", "content": "You are a helpful assistant that provides concise library/tool/framework summaries."},
-                                {"role": "user", "content": p}
+                                {"role": "user", "content": self._prepare_prompt_with_thinking_control(p)}
                             ],
                             temperature=0.3,
                             max_tokens=4000

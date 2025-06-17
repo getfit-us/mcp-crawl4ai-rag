@@ -155,6 +155,8 @@ LLM_MODEL_API_KEY=your_openai_api_key
 
 # LLM for summaries and contextual embeddings
 SUMMARY_LLM_MODEL=gpt-4o-mini
+# Optional: Disable thinking on reasoning models (adds /no_think to prompts)
+DISABLE_THINKING=false
 
 # Embedding Model Configuration
 EMBEDDING_MODEL=text-embedding-3-small
@@ -197,6 +199,13 @@ When enabled, this strategy enhances each chunk's embedding with additional cont
 - **When to use**: Enable this when you need high-precision retrieval where context matters, such as technical documentation where terms might have different meanings in different sections.
 - **Trade-offs**: Slower indexing due to LLM calls for each chunk, but significantly better retrieval accuracy.
 - **Cost**: Additional LLM API calls during indexing.
+
+#### **DISABLE_THINKING**
+When enabled, this option adds `/no_think` to prompts sent to reasoning models (like OpenAI's o1-preview, o1-mini) to skip their internal thinking process and provide direct responses. This can speed up response times and reduce API costs for reasoning models when detailed thinking isn't needed.
+
+- **When to use**: Enable this when using reasoning models for summaries and you want faster, more direct responses without the internal reasoning step.
+- **Trade-offs**: Faster responses and lower costs, but may reduce the quality of reasoning for complex tasks.
+- **Cost**: Lower API costs when using reasoning models as they skip the thinking step.
 
 #### 2. **USE_HYBRID_SEARCH**
 Combines traditional keyword search with semantic vector search to provide more comprehensive results. The system performs both searches in parallel and intelligently merges results, prioritizing documents that appear in both result sets.
@@ -418,6 +427,7 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
         "OPENAI_BASE_URL": "https://your-custom-endpoint.com/v1",
         "OPENAI_ORGANIZATION": "your_org_id",
         "SUMMARY_LLM_MODEL": "gpt-4o-mini",
+        "DISABLE_THINKING": "false",
         "EMBEDDING_MODEL": "text-embedding-3-small",
         "EMBEDDING_DIMENSIONS": "1536",
         "CUSTOM_EMBEDDING_URL": "https://your-embedding-api.com/embed",
@@ -454,6 +464,7 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
                "-e", "OPENAI_BASE_URL",
                "-e", "OPENAI_ORGANIZATION",
                "-e", "SUMMARY_LLM_MODEL",
+               "-e", "DISABLE_THINKING",
                "-e", "EMBEDDING_MODEL",
                "-e", "EMBEDDING_DIMENSIONS",
                "-e", "CUSTOM_EMBEDDING_URL",
@@ -484,6 +495,7 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
         "OPENAI_BASE_URL": "https://your-custom-endpoint.com/v1",
         "OPENAI_ORGANIZATION": "your_org_id",
         "SUMMARY_LLM_MODEL": "gpt-4o-mini",
+        "DISABLE_THINKING": "false",
         "EMBEDDING_MODEL": "text-embedding-3-small",
         "EMBEDDING_DIMENSIONS": "1536",
         "CUSTOM_EMBEDDING_URL": "https://your-embedding-api.com/embed",

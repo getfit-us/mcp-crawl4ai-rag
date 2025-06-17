@@ -21,7 +21,14 @@ def mock_context():
             default_chunk_size=5000,
             use_contextual_embeddings=False,
             use_agentic_rag=False,
-            openai_api_key="test-key"
+            openai_api_key="test-key",
+            enable_batch_summaries=True,
+            enable_batch_embeddings=True,
+            enable_batch_contextual_embeddings=True,
+            summary_batch_size=10,
+            embedding_batch_size=100,
+            contextual_embedding_batch_size=20,
+            disable_thinking=False
         )
     )
     
@@ -40,6 +47,13 @@ def mock_services():
         # Mock embedding service
         embedding_instance = Mock()
         embedding_instance.create_embedding = AsyncMock(return_value=[0.1] * 1536)
+        # Add batch processing methods
+        embedding_instance.create_embeddings_batch = AsyncMock(return_value=[[0.1] * 1536, [0.2] * 1536, [0.3] * 1536])
+        embedding_instance.generate_contextual_embeddings_batch = AsyncMock(return_value=[
+            ("Contextual chunk 1", True),
+            ("Contextual chunk 2", True),
+            ("Contextual chunk 3", True)
+        ])
         MockEmbedding.return_value = embedding_instance
         
         # Mock database service
@@ -57,6 +71,10 @@ def mock_services():
         crawling_instance.extract_source_summary = AsyncMock(return_value="Test source summary")
         crawling_instance.extract_code_blocks = Mock(return_value=[])
         crawling_instance.generate_code_example_summary = AsyncMock(return_value="Code summary")
+        
+        # Add batch processing methods
+        crawling_instance.extract_source_summaries_batch = AsyncMock(return_value=["Source summary 1"])
+        crawling_instance.generate_code_example_summaries_batch = AsyncMock(return_value=["Code summary 1", "Code summary 2"])
         
         # Mock the new cancellation methods
         crawling_instance.start_crawl_operation = AsyncMock(return_value="test-crawl-id-456")
@@ -144,7 +162,8 @@ async def test_crawl_single_page_with_code_examples(mock_context, mock_services)
     # The fix ensures that extract_code_blocks is called with min_length=50 instead of default 1000
     mock_services['crawling'].extract_code_blocks.assert_called_once()
     mock_services['database'].add_code_examples.assert_called_once()
-    assert mock_services['crawling'].generate_code_example_summary.call_count == 2
+    # With batch processing enabled, should use batch method instead of individual calls
+    mock_services['crawling'].generate_code_example_summaries_batch.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -158,8 +177,8 @@ async def test_crawl_single_page_with_contextual_embeddings(mock_context, mock_s
     
     assert result_data["success"] is True
     
-    # Verify contextual embedding was used
-    assert mock_services['text_processor'].generate_contextual_embedding.call_count == 3
+    # With batch processing enabled, should use batch contextual embeddings instead of individual calls
+    mock_services['embedding'].generate_contextual_embeddings_batch.assert_called_once()
 
 
 @pytest.mark.asyncio

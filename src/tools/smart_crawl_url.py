@@ -204,7 +204,8 @@ async def smart_crawl_url(
                     word_count=total_word_count
                 )
         
-        for result in all_results:
+        async def process_single_result(result):
+            """Process a single crawl result with all its chunks and code examples."""
             try:
                 result_url = result['url']
                 markdown_content = result['markdown']
@@ -219,7 +220,12 @@ async def smart_crawl_url(
                 )
                 
                 if not chunks:
-                    continue
+                    return {
+                        'url': result_url,
+                        'chunks_created': 0,
+                        'code_examples': 0,
+                        'success': True
+                    }
                 
                 # Prepare data for storage
                 urls = []
@@ -250,7 +256,7 @@ async def smart_crawl_url(
                 # Generate embeddings (batch or individual)
                 if settings.use_contextual_embeddings:
                     if settings.enable_batch_contextual_embeddings and len(chunks) > 1:
-                        logger.info(f"Using batch contextual embeddings for {len(chunks)} chunks")
+                        logger.info(f"Using batch contextual embeddings for {len(chunks)} chunks from {result_url}")
                         # Prepare chunks with documents for batch processing
                         chunks_with_docs = [(chunk, markdown_content) for chunk in chunks]
                         
@@ -299,7 +305,7 @@ async def smart_crawl_url(
                             embeddings.append(embedding)
                 else:
                     if settings.enable_batch_embeddings and len(chunks) > 1:
-                        logger.info(f"Using batch embeddings for {len(chunks)} chunks")
+                        logger.info(f"Using batch embeddings for {len(chunks)} chunks from {result_url}")
                         # Process embeddings in batches - PARALLEL INSTEAD OF SEQUENTIAL
                         batch_size = settings.embedding_batch_size
                         embedding_tasks = []
@@ -329,7 +335,8 @@ async def smart_crawl_url(
                     url_to_full_document=url_to_full_document
                 )
                 
-                total_chunks_created += doc_result.get('count', 0)
+                chunks_created = doc_result.get('count', 0)
+                code_examples_count = 0
                 
                 # Extract and store code examples if enabled
                 if settings.use_agentic_rag:
@@ -359,7 +366,7 @@ async def smart_crawl_url(
                         
                         # Generate summaries (batch or individual)
                         if settings.enable_batch_summaries and len(code_blocks) > 1:
-                            logger.info(f"Using batch summaries for {len(code_blocks)} code examples")
+                            logger.info(f"Using batch summaries for {len(code_blocks)} code examples from {result_url}")
                             # Prepare data for batch processing
                             code_examples_data = [
                                 (code_block['code'], code_block['context_before'], code_block['context_after'])
@@ -394,7 +401,7 @@ async def smart_crawl_url(
                                          for summary, formatted_code in zip(code_summaries, code_examples)]
                         
                         if settings.enable_batch_embeddings and len(embedding_texts) > 1:
-                            logger.info(f"Using batch embeddings for {len(embedding_texts)} code examples")
+                            logger.info(f"Using batch embeddings for {len(embedding_texts)} code examples from {result_url}")
                             # Process embeddings in batches - PARALLEL INSTEAD OF SEQUENTIAL
                             batch_size = settings.embedding_batch_size
                             embedding_tasks = []
@@ -432,23 +439,62 @@ async def smart_crawl_url(
                             metadatas=code_metadatas
                         )
                         
-                        total_code_examples += code_result.get('count', 0)
+                        code_examples_count = code_result.get('count', 0)
                 
-                processed_urls.append(result_url)
+                return {
+                    'url': result_url,
+                    'chunks_created': chunks_created,
+                    'code_examples': code_examples_count,
+                    'success': True
+                }
                 
             except Exception as e:
                 logger.error(f"Error processing {result.get('url', 'unknown URL')}: {e}")
-                continue
+                return {
+                    'url': result.get('url', 'unknown URL'),
+                    'chunks_created': 0,
+                    'code_examples': 0,
+                    'success': False,
+                    'error': str(e)
+                }
+        
+        # Process all results in parallel using the helper function
+        logger.info(f"Processing {len(all_results)} URLs in parallel")
+        processing_tasks = [process_single_result(result) for result in all_results]
+        processing_results = await asyncio.gather(*processing_tasks, return_exceptions=True)
+        
+        # Aggregate results
+        total_chunks_created = 0
+        total_code_examples = 0
+        processed_urls = []
+        failed_urls = []
+        
+        for result in processing_results:
+            if isinstance(result, Exception):
+                logger.error(f"Processing task failed with exception: {result}")
+                failed_urls.append("unknown URL")
+            elif result['success']:
+                total_chunks_created += result['chunks_created']
+                total_code_examples += result['code_examples']
+                processed_urls.append(result['url'])
+            else:
+                failed_urls.append(result['url'])
+                logger.error(f"Failed to process {result['url']}: {result.get('error', 'Unknown error')}")
+        
+        success_message = f"Successfully crawled {len(processed_urls)} URLs using {crawl_type} strategy"
+        if failed_urls:
+            success_message += f" ({len(failed_urls)} URLs failed)"
         
         return json.dumps({
             "success": True,
             "crawl_id": crawl_id,
             "crawl_type": crawl_type,
             "urls_processed": len(processed_urls),
+            "urls_failed": len(failed_urls),
             "total_chunks_created": total_chunks_created,
             "total_code_examples": total_code_examples,
             "sources_updated": list(source_ids),
-            "message": f"Successfully crawled {len(processed_urls)} URLs using {crawl_type} strategy"
+            "message": success_message
         })
         
     except Exception as e:

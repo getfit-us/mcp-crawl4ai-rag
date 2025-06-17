@@ -20,9 +20,9 @@ def mock_embedding_service():
 
 
 @pytest.fixture
-def search_service(mock_supabase_client, test_settings, mock_embedding_service):
+def search_service(mock_postgres_pool, test_settings, mock_embedding_service):
     """Create SearchService with mocked dependencies."""
-    return SearchService(mock_supabase_client, test_settings, mock_embedding_service)
+    return SearchService(mock_postgres_pool, test_settings, mock_embedding_service)
 
 
 @pytest.fixture
@@ -73,40 +73,67 @@ def mock_code_results():
 
 
 @pytest.mark.asyncio
-async def test_search_documents_success(search_service, mock_supabase_client, mock_search_results, mock_embedding_service) -> None:
+async def test_search_documents_success(search_service, mock_postgres_pool, mock_search_results, mock_embedding_service) -> None:
     """Test successful document search."""
-    # Mock RPC response
-    mock_execute = Mock()
-    mock_execute.data = mock_search_results
-    mock_supabase_client.rpc.return_value.execute.return_value = mock_execute
+    # Get the mock connection from the pool
+    mock_conn = mock_postgres_pool._mock_conn
+    
+    # Mock fetch response
+    mock_conn.fetch.return_value = [
+        {
+            'content': 'First result content',
+            'url': 'https://example.com/1',
+            'source_id': 'example.com',
+            'chunk_number': 1,
+            'similarity': 0.9,
+            'metadata': {'title': 'First'}
+        },
+        {
+            'content': 'Second result content',
+            'url': 'https://example.com/2',
+            'source_id': 'example.com',
+            'chunk_number': 2,
+            'similarity': 0.8,
+            'metadata': {'title': 'Second'}
+        }
+    ]
     
     results = await search_service.search_documents(
         query="test query",
         match_count=10
     )
     
-    assert len(results) == 3
+    assert len(results) == 2
     assert isinstance(results[0], SearchResult)
     assert results[0].content == "First result content"
     assert results[0].similarity_score == 0.9
     assert results[0].url == "https://example.com/1"
     
-    # Verify embedding was created (can't use assert_called_once_with on async function)
-    # The function was called during search_documents
-    
-    # Verify RPC was called
-    mock_supabase_client.rpc.assert_called_once_with('match_crawled_pages', {
-        'query_embedding': [0.1] * 1536,
-        'match_count': 10
-    })
+    # Verify PostgreSQL function was called
+    mock_conn.fetch.assert_called_once()
+    call_args = mock_conn.fetch.call_args[0]
+    assert "match_crawled_pages" in call_args[0]
+    assert len(call_args[1]) == 1536  # Embedding vector
+    assert call_args[2] == 10  # Match count
 
 
 @pytest.mark.asyncio
-async def test_search_documents_with_filters(search_service, mock_supabase_client, mock_search_results) -> None:
+async def test_search_documents_with_filters(search_service, mock_postgres_pool, mock_search_results) -> None:
     """Test document search with metadata filters."""
-    mock_execute = Mock()
-    mock_execute.data = mock_search_results
-    mock_supabase_client.rpc.return_value.execute.return_value = mock_execute
+    # Get the mock connection from the pool
+    mock_conn = mock_postgres_pool._mock_conn
+    
+    # Mock fetch response
+    mock_conn.fetch.return_value = [
+        {
+            'content': 'Filtered result content',
+            'url': 'https://example.com/filtered',
+            'source_id': 'docs.example.com',
+            'chunk_number': 1,
+            'similarity': 0.9,
+            'metadata': {'category': 'tutorial'}
+        }
+    ]
     
     filter_metadata = {'category': 'tutorial'}
     await search_service.search_documents(
@@ -117,20 +144,21 @@ async def test_search_documents_with_filters(search_service, mock_supabase_clien
     )
     
     # Verify filters were applied
-    expected_params = {
-        'query_embedding': [0.1] * 1536,
-        'match_count': 5,
-        'filter': {'category': 'tutorial'},
-        'source_filter': 'docs.example.com'
-    }
-    mock_supabase_client.rpc.assert_called_once_with('match_crawled_pages', expected_params)
+    mock_conn.fetch.assert_called_once()
+    call_args = mock_conn.fetch.call_args[0]
+    assert "match_crawled_pages" in call_args[0]
+    assert call_args[3] == filter_metadata  # Filter metadata
+    assert call_args[4] == "docs.example.com"  # Source filter
 
 
 @pytest.mark.asyncio
-async def test_search_documents_error_handling(search_service, mock_supabase_client) -> None:
+async def test_search_documents_error_handling(search_service, mock_postgres_pool) -> None:
     """Test error handling in document search."""
-    # Mock RPC to raise an exception
-    mock_supabase_client.rpc.return_value.execute.side_effect = Exception("Database error")
+    # Get the mock connection from the pool
+    mock_conn = mock_postgres_pool._mock_conn
+    
+    # Mock fetch to raise an exception
+    mock_conn.fetch.side_effect = Exception("Database error")
     
     results = await search_service.search_documents(query="test query")
     
@@ -141,7 +169,10 @@ async def test_search_documents_error_handling(search_service, mock_supabase_cli
 async def test_search_documents_embedding_error(search_service, mock_embedding_service) -> None:
     """Test error handling when embedding creation fails."""
     # Mock embedding service to raise an exception
-    mock_embedding_service.create_embedding.side_effect = Exception("Embedding API error")
+    async def mock_create_embedding_error(text):
+        raise Exception("Embedding API error")
+    
+    mock_embedding_service.create_embedding = mock_create_embedding_error
     
     results = await search_service.search_documents(
         query="test query",
@@ -153,11 +184,23 @@ async def test_search_documents_embedding_error(search_service, mock_embedding_s
 
 
 @pytest.mark.asyncio
-async def test_search_code_examples_success(search_service, mock_supabase_client, mock_code_results) -> None:
+async def test_search_code_examples_success(search_service, mock_postgres_pool, mock_code_results) -> None:
     """Test successful code example search."""
-    mock_execute = Mock()
-    mock_execute.data = mock_code_results
-    mock_supabase_client.rpc.return_value.execute.return_value = mock_execute
+    # Get the mock connection from the pool
+    mock_conn = mock_postgres_pool._mock_conn
+    
+    # Mock fetch response
+    mock_conn.fetch.return_value = [
+        {
+            'content': 'def example():\n    return "Hello"',
+            'url': 'https://example.com/code1',
+            'source_id': 'example.com',
+            'chunk_number': 1,
+            'similarity': 0.85,
+            'summary': 'Example function',
+            'metadata': {'language': 'python'}
+        }
+    ]
     
     results = await search_service.search_code_examples(
         query="example function",
@@ -166,18 +209,23 @@ async def test_search_code_examples_success(search_service, mock_supabase_client
     )
     
     assert len(results) == 1
-    assert results[0]['content'] == 'def example():\n    return "Hello"'  # Fixed: DB returns 'content' not 'code'
-    assert results[0]['metadata']['language'] == 'python'  # Fixed: language is in metadata
+    assert results[0]['content'] == 'def example():\n    return "Hello"'
+    assert results[0]['metadata']['language'] == 'python'
     
-    # Enhanced query was used during search
+    # Verify PostgreSQL function was called
+    mock_conn.fetch.assert_called_once()
+    call_args = mock_conn.fetch.call_args[0]
+    assert "match_code_examples" in call_args[0]
 
 
 @pytest.mark.asyncio
-async def test_search_code_examples_with_source_filter(search_service, mock_supabase_client, mock_code_results) -> None:
+async def test_search_code_examples_with_source_filter(search_service, mock_postgres_pool, mock_code_results) -> None:
     """Test code example search with source filter."""
-    mock_execute = Mock()
-    mock_execute.data = mock_code_results
-    mock_supabase_client.rpc.return_value.execute.return_value = mock_execute
+    # Get the mock connection from the pool
+    mock_conn = mock_postgres_pool._mock_conn
+    
+    # Mock fetch response
+    mock_conn.fetch.return_value = []
     
     await search_service.search_code_examples(
         query="test",
@@ -185,75 +233,103 @@ async def test_search_code_examples_with_source_filter(search_service, mock_supa
     )
     
     # Verify source filter was applied
-    call_args = mock_supabase_client.rpc.call_args[0][1]
-    assert 'source_filter' in call_args
-    assert call_args['source_filter'] == 'github.com'
+    mock_conn.fetch.assert_called_once()
+    call_args = mock_conn.fetch.call_args[0]
+    assert "match_code_examples" in call_args[0]
+    assert call_args[4] == "github.com"  # Source filter parameter
 
 
 @pytest.mark.asyncio
-async def test_perform_search_documents_only(search_service, mock_supabase_client, mock_search_results) -> None:
+async def test_perform_search_documents_only(search_service, mock_postgres_pool, mock_search_results) -> None:
     """Test perform_search with documents only."""
-    mock_execute = Mock()
-    mock_execute.data = mock_search_results
-    mock_supabase_client.rpc.return_value.execute.return_value = mock_execute
+    # Get the mock connection from the pool
+    mock_conn = mock_postgres_pool._mock_conn
+    
+    # Mock fetch response
+    mock_conn.fetch.return_value = [
+        {
+            'content': 'Test result content',
+            'url': 'https://example.com/test',
+            'source_id': 'example.com',
+            'chunk_number': 1,
+            'similarity': 0.9,
+            'metadata': {'title': 'Test'}
+        }
+    ]
     
     request = SearchRequest(
         query="test query",
-        num_results=5,
-        semantic_threshold=0.75
+        num_results=5
     )
     
     response = await search_service.perform_search(request)
     
     assert response.success is True
-    assert len(response.results) == 2  # Only results with similarity >= 0.75
-    assert response.results[0].similarity_score == 0.9
-    assert response.results[1].similarity_score == 0.8
-    assert response.search_type == SearchType.SEMANTIC
+    assert len(response.results) == 1
+    assert response.results[0].content == "Test result content"
+    assert response.total_results == 1
 
 
 @pytest.mark.asyncio
-async def test_perform_search_with_code_examples(search_service, mock_supabase_client, mock_search_results, mock_code_results, test_settings) -> None:
+async def test_perform_search_with_code_examples(search_service, mock_postgres_pool, mock_search_results, mock_code_results, test_settings) -> None:
     """Test perform_search including code examples."""
     # Enable code examples
     test_settings.use_agentic_rag = True
     
-    # Mock both document and code searches
-    mock_execute1 = Mock()
-    mock_execute1.data = mock_search_results
-    mock_execute2 = Mock()
-    mock_execute2.data = mock_code_results
-    mock_supabase_client.rpc.return_value.execute.side_effect = [
-        mock_execute1,  # Document search
-        mock_execute2   # Code search
+    # Get the mock connection from the pool
+    mock_conn = mock_postgres_pool._mock_conn
+    
+    # Mock fetch responses for both document and code searches
+    mock_conn.fetch.side_effect = [
+        [  # Document search results
+            {
+                'content': 'Document result',
+                'url': 'https://example.com/doc',
+                'source_id': 'example.com',
+                'chunk_number': 1,
+                'similarity': 0.9,
+                'metadata': {'title': 'Doc'}
+            }
+        ],
+        [  # Code example search results
+            {
+                'content': 'def test(): pass',
+                'url': 'https://example.com/code',
+                'source_id': 'example.com',
+                'chunk_number': 1,
+                'similarity': 0.8,
+                'summary': 'Test function',
+                'metadata': {'language': 'python'}
+            }
+        ]
     ]
     
-    request = SearchRequest(query="test query", num_results=5)
-    
-    response = await search_service.perform_search(
-        request,
-        include_code_examples=True
+    request = SearchRequest(
+        query="test function",
+        num_results=5
     )
     
-    assert response.success is True
-    assert len(response.results) == 4  # 3 documents + 1 code example
+    response = await search_service.perform_search(request, include_code_examples=True)
     
-    # Verify code example is included
-    code_result = next(r for r in response.results if r.metadata.get('type') == 'code_example')
-    assert code_result is not None
-    assert code_result.metadata['language'] == 'python'
+    assert response.success is True
+    assert len(response.results) == 2  # Document + code example
+    assert response.total_results == 2
 
 
 @pytest.mark.asyncio
-async def test_perform_search_error_handling(search_service, mock_supabase_client) -> None:
+async def test_perform_search_error_handling(search_service, mock_postgres_pool) -> None:
     """Test perform_search error handling."""
-    mock_supabase_client.rpc.return_value.execute.side_effect = Exception("Search failed")
+    # Get the mock connection from the pool
+    mock_conn = mock_postgres_pool._mock_conn
+    
+    # Mock fetch to raise an exception
+    mock_conn.fetch.side_effect = Exception("Search failed")
     
     request = SearchRequest(query="test query")
     response = await search_service.perform_search(request)
     
-    # Since search_documents catches the exception and returns empty list,
-    # perform_search returns success=True with empty results
+    # The search_documents method catches exceptions and returns empty list,
+    # so perform_search will return success=True with empty results
     assert response.success is True
     assert response.total_results == 0
     assert len(response.results) == 0

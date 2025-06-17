@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     openai_base_url: Optional[str] = os.getenv("SUMMARY_LLM_BASE_URL")  # Custom base URL for OpenAI-compatible endpoints
     openai_organization: Optional[str] = os.getenv("OPENAI_ORGANIZATION")  # Organization ID for OpenAI
     summary_llm_model: str = os.getenv("SUMMARY_LLM_MODEL", "gpt-4o-mini")
+    disable_thinking: bool = os.getenv("DISABLE_THINKING", "false") == "true"  # Disable thinking on think models (adds /no_think to prompt)
     
     
     # PostgreSQL Configuration - REQUIRED if using Local Postgres instead of Supabase

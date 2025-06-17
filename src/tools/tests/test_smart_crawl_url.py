@@ -20,7 +20,13 @@ def mock_context():
         settings=SimpleNamespace(
             default_chunk_size=5000,
             use_contextual_embeddings=False,
-            use_agentic_rag=False
+            use_agentic_rag=False,
+            enable_batch_summaries=True,
+            enable_batch_embeddings=True,
+            enable_batch_contextual_embeddings=True,
+            summary_batch_size=10,
+            embedding_batch_size=100,
+            contextual_embedding_batch_size=20
         )
     )
     
@@ -39,6 +45,12 @@ def mock_services():
         # Mock embedding service
         embedding_instance = Mock()
         embedding_instance.create_embedding = AsyncMock(return_value=[0.1] * 1536)
+        # Add batch processing methods
+        embedding_instance.create_embeddings_batch = AsyncMock(return_value=[[0.1] * 1536, [0.2] * 1536])
+        embedding_instance.generate_contextual_embeddings_batch = AsyncMock(return_value=[
+            ("Contextual chunk 1", True),
+            ("Contextual chunk 2", True)
+        ])
         MockEmbedding.return_value = embedding_instance
         
         # Mock database service
@@ -62,6 +74,10 @@ def mock_services():
         crawling_instance.extract_source_summary = AsyncMock(return_value="Test source summary")
         crawling_instance.extract_code_blocks = Mock(return_value=[])
         crawling_instance.generate_code_example_summary = AsyncMock(return_value="Code summary")
+        
+        #batch processing methods
+        crawling_instance.extract_source_summaries_batch = AsyncMock(return_value=["Source summary 1", "Source summary 2"])
+        crawling_instance.generate_code_example_summaries_batch = AsyncMock(return_value=["Code summary 1", "Code summary 2"])
         
         # Mock the new cancellation methods
         crawling_instance.start_crawl_operation = AsyncMock(return_value="test-crawl-id-123")

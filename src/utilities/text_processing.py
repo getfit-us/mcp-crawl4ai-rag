@@ -30,6 +30,20 @@ class TextProcessor:
         """
         return text.replace("<think>", "").replace("</think>", "")
     
+    def _prepare_prompt_with_thinking_control(self, prompt: str) -> str:
+        """
+        Prepare prompt with /no_think prefix if thinking is disabled.
+        
+        Args:
+            prompt: The original prompt text
+            
+        Returns:
+            The prompt with /no_think prefix if disable_thinking is True
+        """
+        if self.settings.disable_thinking:
+            return f"/no_think\n\n{prompt}"
+        return prompt
+    
     def smart_chunk_markdown(self, text: str, chunk_size: int = 5000) -> List[str]:
         """
         Split text into chunks, respecting code blocks and paragraphs.
@@ -137,7 +151,7 @@ Please give a short succinct context to situate this chunk within the overall do
                     model=self.settings.summary_llm_model,
                     messages=[
                         {"role": "system", "content": "You are a helpful assistant that provides concise contextual information."},
-                        {"role": "user", "content": prompt}
+                        {"role": "user", "content": self._prepare_prompt_with_thinking_control(prompt)}
                     ],
                     temperature=0.3,
                     max_tokens=4000

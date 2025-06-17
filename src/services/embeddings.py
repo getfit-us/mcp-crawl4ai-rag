@@ -50,6 +50,19 @@ class EmbeddingService:
         """
         return text.replace("<think>", "").replace("</think>", "")
     
+    def _prepare_prompt_with_thinking_control(self, prompt: str) -> str:
+        """
+        Prepare prompt with /no_think prefix if thinking is disabled.
+        
+        Args:
+            prompt: The original prompt text
+            
+        Returns:
+            The prompt with /no_think prefix if disable_thinking is True
+        """
+        if self.settings.disable_thinking:
+            return f"/no_think\n\n{prompt}"
+        return prompt
     
     async def _run_in_executor(self, func: Callable[[], Any]) -> Any:
         """
@@ -220,7 +233,7 @@ Please give a short succinct context to situate this chunk within the whole docu
                             "role": "system",
                             "content": "You are a helpful assistant that provides concise contextual information."
                         },
-                        {"role": "user", "content": prompt}
+                        {"role": "user", "content": self._prepare_prompt_with_thinking_control(prompt)}
                     ],
                     temperature=0,
                     max_tokens=4000
@@ -334,7 +347,7 @@ Please give a short succinct context to situate this chunk within the whole docu
                         "role": "system",
                         "content": "You are a helpful assistant that provides concise contextual information."
                     },
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": self._prepare_prompt_with_thinking_control(prompt)}
                 ])
             
             # Process batch requests
