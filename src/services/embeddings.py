@@ -295,3 +295,86 @@ Please give a short succinct context to situate this chunk within the whole docu
         return loop.run_until_complete(
             self.generate_contextual_embedding(full_document, content)
         )
+    
+    async def generate_contextual_embeddings_batch(
+        self,
+        chunks_with_documents: List[Tuple[str, str]]
+    ) -> List[Tuple[str, bool]]:
+        """
+        Generate contextual information for multiple chunks in batch using a single API call.
+        
+        Args:
+            chunks_with_documents: List of tuples containing (chunk, full_document)
+            
+        Returns:
+            List of tuples containing (contextual_text, was_contextualized)
+        """
+        if not chunks_with_documents:
+            return []
+        
+        # Prepare batch prompts
+        batch_prompts = []
+        for chunk, full_document in chunks_with_documents:
+            prompt = f"""<document> 
+{full_document[:25000]} 
+</document>
+Here is the chunk we want to situate within the whole document 
+<chunk> 
+{chunk} 
+</chunk> 
+Please give a short succinct context to situate this chunk within the whole document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else."""
+            batch_prompts.append(prompt)
+        
+        try:
+            # Create batch completion request
+            messages_batch = []
+            for prompt in batch_prompts:
+                messages_batch.append([
+                    {
+                        "role": "system",
+                        "content": "You are a helpful assistant that provides concise contextual information."
+                    },
+                    {"role": "user", "content": prompt}
+                ])
+            
+            # Process batch requests
+            loop = asyncio.get_event_loop()
+            results = []
+            
+            # For now, process in parallel but we could enhance this to use batch API when available
+            tasks = []
+            for messages in messages_batch:
+                task = loop.run_in_executor(
+                    None,
+                    lambda m=messages: self.client.chat.completions.create(
+                        model=self.settings.summary_llm_model,
+                        messages=m,
+                        temperature=0,
+                        max_tokens=4000
+                    )
+                )
+                tasks.append(task)
+            
+            responses = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Process responses
+            contextual_results = []
+            for i, (chunk, full_document) in enumerate(chunks_with_documents):
+                if isinstance(responses[i], Exception):
+                    logger.error(f"Error generating contextual embedding for chunk {i}: {responses[i]}")
+                    contextual_results.append((chunk, False))
+                else:
+                    try:
+                        context = self.remove_think_tags(responses[i].choices[0].message.content.strip())
+                        contextual_text = f"{context}\n---\n{chunk}"
+                        contextual_results.append((contextual_text, True))
+                    except Exception as e:
+                        logger.error(f"Error processing contextual embedding response for chunk {i}: {e}")
+                        contextual_results.append((chunk, False))
+            
+            return contextual_results
+            
+        except Exception as e:
+            logger.error(f"Error in batch contextual embedding generation: {e}")
+            # Fall back to original chunks
+            return [(chunk, False) for chunk, _ in chunks_with_documents]

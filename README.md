@@ -222,6 +222,33 @@ Applies cross-encoder reranking to search results after initial retrieval. Uses 
 - **Benefits**: Better result relevance, especially for complex queries. Works with both regular RAG search and code example search.
 - **Custom Models**: You can use custom reranking models from Hugging Face Hub, local files, or custom endpoints.
 
+### Batch Processing Configuration
+
+The MCP server supports batch processing for embeddings and summarization to significantly speed up crawling operations when dealing with multiple documents or chunks:
+
+#### **ENABLE_BATCH_EMBEDDINGS** (default: true)
+Enables batch processing for embedding generation, processing multiple texts in a single API call.
+
+- **EMBEDDING_BATCH_SIZE** (default: 100): Number of texts to process in each batch. Larger batches are more efficient but may hit API limits.
+- **When to use**: Keep enabled for faster embedding generation. Only disable for debugging individual embedding issues.
+- **Benefits**: Can provide 3-10x speedup when processing multiple chunks.
+
+#### **ENABLE_BATCH_SUMMARIES** (default: false)
+Enables batch processing for LLM-based summarization (code examples and source summaries).
+
+- **SUMMARY_BATCH_SIZE** (default: 10): Number of summaries to generate in parallel. Balance between speed and API rate limits.
+- **When to use**: Enable when crawling multiple pages or documents with many code examples.
+- **Trade-offs**: Faster processing but may hit LLM API rate limits with large batches.
+- **Benefits**: Can provide 5-15x speedup for summary generation.
+
+#### **ENABLE_BATCH_CONTEXTUAL_EMBEDDINGS** (default: false)
+Enables batch processing for contextual embedding generation (when USE_CONTEXTUAL_EMBEDDINGS is enabled).
+
+- **CONTEXTUAL_EMBEDDING_BATCH_SIZE** (default: 20): Number of contextual embeddings to process in parallel.
+- **When to use**: Enable when using contextual embeddings on documents with many chunks.
+- **Trade-offs**: Faster contextual processing but higher LLM API usage.
+- **Benefits**: Can provide 5-10x speedup for contextual embedding generation.
+
 ### Recommended Configurations
 
 **For general documentation RAG:**
@@ -238,6 +265,9 @@ USE_CONTEXTUAL_EMBEDDINGS=true
 USE_HYBRID_SEARCH=true
 USE_AGENTIC_RAG=true
 USE_RERANKING=true
+ENABLE_BATCH_EMBEDDINGS=true
+ENABLE_BATCH_SUMMARIES=true
+ENABLE_BATCH_CONTEXTUAL_EMBEDDINGS=true
 ```
 
 **For fast, basic RAG:**
@@ -246,6 +276,23 @@ USE_CONTEXTUAL_EMBEDDINGS=false
 USE_HYBRID_SEARCH=true
 USE_AGENTIC_RAG=false
 USE_RERANKING=false
+ENABLE_BATCH_EMBEDDINGS=true
+ENABLE_BATCH_SUMMARIES=false
+ENABLE_BATCH_CONTEXTUAL_EMBEDDINGS=false
+```
+
+**For maximum processing speed (with higher API usage):**
+```
+USE_CONTEXTUAL_EMBEDDINGS=false
+USE_HYBRID_SEARCH=true
+USE_AGENTIC_RAG=true
+USE_RERANKING=true
+ENABLE_BATCH_EMBEDDINGS=true
+EMBEDDING_BATCH_SIZE=200
+ENABLE_BATCH_SUMMARIES=true
+SUMMARY_BATCH_SIZE=20
+ENABLE_BATCH_CONTEXTUAL_EMBEDDINGS=true
+CONTEXTUAL_EMBEDDING_BATCH_SIZE=50
 ```
 
 ## Custom Model Configuration
@@ -418,6 +465,12 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
                "-e", "USE_HYBRID_SEARCH",
                "-e", "USE_AGENTIC_RAG",
                "-e", "USE_RERANKING",
+               "-e", "ENABLE_BATCH_EMBEDDINGS",
+               "-e", "EMBEDDING_BATCH_SIZE",
+               "-e", "ENABLE_BATCH_SUMMARIES", 
+               "-e", "SUMMARY_BATCH_SIZE",
+               "-e", "ENABLE_BATCH_CONTEXTUAL_EMBEDDINGS",
+               "-e", "CONTEXTUAL_EMBEDDING_BATCH_SIZE",
                "-e", "POSTGRES_HOST", 
                "-e", "POSTGRES_PORT", 
                "-e", "POSTGRES_DB", 

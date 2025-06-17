@@ -118,7 +118,7 @@ async def test_search_code_examples_disabled(mock_context) -> None:
     result_data = json.loads(result)
     
     assert result_data["success"] is False
-    assert "Code example extraction is not enabled" in result_data["error"]
+    assert "Code example search is not enabled" in result_data["error"]
     assert result_data["results"] == []
 
 

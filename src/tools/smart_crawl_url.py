@@ -9,7 +9,7 @@ from mcp.server.fastmcp import Context
 from crawl4ai_mcp.mcp_server import mcp
 from crawl4ai_mcp.services.database import DatabaseService
 from crawl4ai_mcp.services.embeddings import EmbeddingService
-from crawl4ai_mcp.services.crawling import CrawlingService
+from crawl4ai_mcp.services.crawling import CrawlingService, CrawlCancelledException
 from crawl4ai_mcp.utilities.metadata import create_chunk_metadata
 from crawl4ai_mcp.utilities.text_processing import TextProcessor
 from crawl4ai_mcp.models import CrawlContext
@@ -71,37 +71,67 @@ async def smart_crawl_url(
         
         # Determine URL type and crawl accordingly
         all_results = []
+        crawl_id = None
         
-        if crawling_service.is_txt(url):
-            # Crawl as markdown file
-            all_results = await crawling_service.crawl_markdown_file(url)
-            crawl_type = "txt file"
-            
-        elif crawling_service.is_sitemap(url):
-            # Parse sitemap and crawl all URLs
-            logger.info(f"Detected sitemap URL: {url}")
-            urls_from_sitemap = crawling_service.parse_sitemap(url)
-            logger.info(f"Found {len(urls_from_sitemap)} URLs in sitemap")
-            
-            if urls_from_sitemap:
-                logger.info(f"Starting batch crawl of {len(urls_from_sitemap)} URLs")
-                all_results = await crawling_service.crawl_batch(
-                    urls_from_sitemap, 
-                    max_concurrent=max_concurrent
-                )
-                logger.info(f"Batch crawl completed. Got {len(all_results)} results")
+        try:
+            if crawling_service.is_txt(url):
+                # Crawl as markdown file
+                crawl_id = await crawling_service.start_crawl_operation("txt_file", [url])
+                all_results = await crawling_service.crawl_markdown_file(url, crawl_id)
+                crawl_type = "txt file"
+                
+            elif crawling_service.is_sitemap(url):
+                # Parse sitemap and crawl all URLs
+                logger.info(f"Detected sitemap URL: {url}")
+                urls_from_sitemap = crawling_service.parse_sitemap(url)
+                logger.info(f"Found {len(urls_from_sitemap)} URLs in sitemap")
+                
+                if urls_from_sitemap:
+                    crawl_id = await crawling_service.start_crawl_operation("sitemap", urls_from_sitemap)
+                    logger.info(f"Starting batch crawl of {len(urls_from_sitemap)} URLs")
+                    all_results = await crawling_service.crawl_batch(
+                        urls_from_sitemap, 
+                        max_concurrent=max_concurrent,
+                        crawl_id=crawl_id
+                    )
+                    logger.info(f"Batch crawl completed. Got {len(all_results)} results")
+                else:
+                    logger.warning("No URLs found in sitemap")
+                crawl_type = "sitemap"
+                
             else:
-                logger.warning("No URLs found in sitemap")
-            crawl_type = "sitemap"
+                # Crawl recursively following internal links
+                crawl_id = await crawling_service.start_crawl_operation("recursive", [url])
+                all_results = await crawling_service.crawl_recursive_internal_links(
+                    [url], 
+                    max_depth=max_depth, 
+                    max_concurrent=max_concurrent,
+                    crawl_id=crawl_id
+                )
+                crawl_type = "recursive"
+        
+        except CrawlCancelledException as cancel_error:
+            # Handle crawl cancellation specifically
+            if crawl_id:
+                await crawling_service.finish_crawl_operation(crawl_id, "cancelled")
             
-        else:
-            # Crawl recursively following internal links
-            all_results = await crawling_service.crawl_recursive_internal_links(
-                [url], 
-                max_depth=max_depth, 
-                max_concurrent=max_concurrent
-            )
-            crawl_type = "recursive"
+            return json.dumps({
+                "success": False,
+                "error": "Crawl operation was cancelled",
+                "crawl_id": crawl_id,
+                "message": str(cancel_error)
+            })
+        
+        except Exception as crawl_error:
+            # Handle other errors
+            if crawl_id:
+                await crawling_service.finish_crawl_operation(crawl_id, "failed")
+            raise crawl_error
+        
+        finally:
+            # Mark operation as completed if it was started
+            if crawl_id:
+                await crawling_service.finish_crawl_operation(crawl_id, "completed")
         
         if not all_results:
             return json.dumps({
@@ -122,26 +152,56 @@ async def smart_crawl_url(
             source_ids.add(source_id)
         
         # Update source info for each unique source BEFORE processing documents
-        for source_id in source_ids:
-            # Get all content for this source
-            source_content = "\n\n".join([
-                r['markdown'] for r in all_results 
-                if urlparse(r['url']).netloc == source_id
-            ])
+        if settings.enable_batch_summaries and len(source_ids) > 1:
+            logger.info(f"Using batch summaries for {len(source_ids)} sources")
+            # Prepare source data for batch processing
+            source_data = []
+            source_word_counts = []
             
-            # Calculate total word count
-            total_word_count = len(source_content.split())
+            for source_id in source_ids:
+                # Get all content for this source
+                source_content = "\n\n".join([
+                    r['markdown'] for r in all_results 
+                    if urlparse(r['url']).netloc == source_id
+                ])
+                
+                # Calculate total word count
+                total_word_count = len(source_content.split())
+                source_word_counts.append(total_word_count)
+                source_data.append((source_id, source_content[:10000]))
             
-            # Generate summary
-            source_summary = await crawling_service.extract_source_summary(
-                source_id, source_content[:10000]
-            )
+            # Generate summaries in batch
+            source_summaries = await crawling_service.extract_source_summaries_batch(source_data)
             
-            await database_service.update_source_info(
-                source_id=source_id,
-                summary=source_summary,
-                word_count=total_word_count
-            )
+            # Update source info
+            for i, source_id in enumerate(source_ids):
+                await database_service.update_source_info(
+                    source_id=source_id,
+                    summary=source_summaries[i],
+                    word_count=source_word_counts[i]
+                )
+        else:
+            # Process source summaries individually
+            for source_id in source_ids:
+                # Get all content for this source
+                source_content = "\n\n".join([
+                    r['markdown'] for r in all_results 
+                    if urlparse(r['url']).netloc == source_id
+                ])
+                
+                # Calculate total word count
+                total_word_count = len(source_content.split())
+                
+                # Generate summary
+                source_summary = await crawling_service.extract_source_summary(
+                    source_id, source_content[:10000]
+                )
+                
+                await database_service.update_source_info(
+                    source_id=source_id,
+                    summary=source_summary,
+                    word_count=total_word_count
+                )
         
         for result in all_results:
             try:
@@ -168,22 +228,11 @@ async def smart_crawl_url(
                 metadatas = []
                 url_to_full_document = {result_url: markdown_content}
                 
-                # Process each chunk
+                # Prepare chunk data
                 for i, chunk in enumerate(chunks):
                     urls.append(result_url)
                     chunk_numbers.append(i + 1)
                     contents.append(chunk)
-                    
-                    # Generate embedding
-                    if settings.use_contextual_embeddings:
-                        contextual_content, _ = await text_processor.generate_contextual_embedding(
-                            markdown_content, chunk
-                        )
-                        embedding = await embedding_service.create_embedding(contextual_content)
-                    else:
-                        embedding = await embedding_service.create_embedding(chunk)
-                    
-                    embeddings.append(embedding)
                     
                     # Extract metadata
                     section_info = text_processor.extract_section_info(chunk)
@@ -196,6 +245,58 @@ async def smart_crawl_url(
                         section_info=section_info
                     )
                     metadatas.append(metadata)
+                
+                # Generate embeddings (batch or individual)
+                if settings.use_contextual_embeddings:
+                    if settings.enable_batch_contextual_embeddings and len(chunks) > 1:
+                        logger.info(f"Using batch contextual embeddings for {len(chunks)} chunks")
+                        # Prepare chunks with documents for batch processing
+                        chunks_with_docs = [(chunk, markdown_content) for chunk in chunks]
+                        
+                        # Process in batches
+                        batch_size = settings.contextual_embedding_batch_size
+                        contextual_results = []
+                        
+                        for i in range(0, len(chunks_with_docs), batch_size):
+                            batch = chunks_with_docs[i:i + batch_size]
+                            batch_results = await embedding_service.generate_contextual_embeddings_batch(batch)
+                            contextual_results.extend(batch_results)
+                        
+                        # Get embeddings for contextual content
+                        contextual_texts = [result[0] for result in contextual_results]
+                        if settings.enable_batch_embeddings:
+                            # Process embeddings in batches
+                            embedding_batch_size = settings.embedding_batch_size
+                            for i in range(0, len(contextual_texts), embedding_batch_size):
+                                batch_texts = contextual_texts[i:i + embedding_batch_size]
+                                batch_embeddings = await embedding_service.create_embeddings_batch(batch_texts)
+                                embeddings.extend(batch_embeddings)
+                        else:
+                            for contextual_text in contextual_texts:
+                                embedding = await embedding_service.create_embedding(contextual_text)
+                                embeddings.append(embedding)
+                    else:
+                        # Process individually
+                        for chunk in chunks:
+                            contextual_content, _ = await text_processor.generate_contextual_embedding(
+                                markdown_content, chunk
+                            )
+                            embedding = await embedding_service.create_embedding(contextual_content)
+                            embeddings.append(embedding)
+                else:
+                    if settings.enable_batch_embeddings and len(chunks) > 1:
+                        logger.info(f"Using batch embeddings for {len(chunks)} chunks")
+                        # Process embeddings in batches
+                        batch_size = settings.embedding_batch_size
+                        for i in range(0, len(chunks), batch_size):
+                            batch_chunks = chunks[i:i + batch_size]
+                            batch_embeddings = await embedding_service.create_embeddings_batch(batch_chunks)
+                            embeddings.extend(batch_embeddings)
+                    else:
+                        # Process individually
+                        for chunk in chunks:
+                            embedding = await embedding_service.create_embedding(chunk)
+                            embeddings.append(embedding)
                 
                 # Add documents to database
                 doc_result = await database_service.add_documents(
@@ -211,7 +312,7 @@ async def smart_crawl_url(
                 
                 # Extract and store code examples if enabled
                 if settings.use_agentic_rag:
-                    code_blocks = crawling_service.extract_code_blocks(markdown_content)
+                    code_blocks = crawling_service.extract_code_blocks(markdown_content, min_length=50)
                     
                     if code_blocks:
                         # Process code examples
@@ -222,6 +323,7 @@ async def smart_crawl_url(
                         code_embeddings = []
                         code_metadatas = []
                         
+                        # Prepare formatted code examples
                         for i, code_block in enumerate(code_blocks):
                             code_urls.append(result_url)
                             code_chunk_numbers.append(i + 1)
@@ -233,25 +335,56 @@ async def smart_crawl_url(
                                 formatted_code = f"```\n{code_block['code']}\n```"
                             
                             code_examples.append(formatted_code)
+                        
+                        # Generate summaries (batch or individual)
+                        if settings.enable_batch_summaries and len(code_blocks) > 1:
+                            logger.info(f"Using batch summaries for {len(code_blocks)} code examples")
+                            # Prepare data for batch processing
+                            code_examples_data = [
+                                (code_block['code'], code_block['context_before'], code_block['context_after'])
+                                for code_block in code_blocks
+                            ]
                             
-                            # Generate summary
-                            summary = await crawling_service.generate_code_example_summary(
-                                code_block['code'],
-                                code_block['context_before'],
-                                code_block['context_after']
-                            )
-                            code_summaries.append(summary)
-                            
-                            # Generate embedding
-                            embedding_text = f"{summary}\n\n{formatted_code}"
-                            embedding = await embedding_service.create_embedding(embedding_text)
-                            code_embeddings.append(embedding)
-                            
-                            # Metadata
+                            # Process summaries in batches
+                            batch_size = settings.summary_batch_size
+                            for i in range(0, len(code_examples_data), batch_size):
+                                batch_data = code_examples_data[i:i + batch_size]
+                                batch_summaries = await crawling_service.generate_code_example_summaries_batch(batch_data)
+                                code_summaries.extend(batch_summaries)
+                        else:
+                            # Process summaries individually
+                            for code_block in code_blocks:
+                                summary = await crawling_service.generate_code_example_summary(
+                                    code_block['code'],
+                                    code_block['context_before'],
+                                    code_block['context_after']
+                                )
+                                code_summaries.append(summary)
+                        
+                        # Generate embeddings for code examples
+                        embedding_texts = [f"{summary}\n\n{formatted_code}" 
+                                         for summary, formatted_code in zip(code_summaries, code_examples)]
+                        
+                        if settings.enable_batch_embeddings and len(embedding_texts) > 1:
+                            logger.info(f"Using batch embeddings for {len(embedding_texts)} code examples")
+                            # Process embeddings in batches
+                            batch_size = settings.embedding_batch_size
+                            for i in range(0, len(embedding_texts), batch_size):
+                                batch_texts = embedding_texts[i:i + batch_size]
+                                batch_embeddings = await embedding_service.create_embeddings_batch(batch_texts)
+                                code_embeddings.extend(batch_embeddings)
+                        else:
+                            # Process embeddings individually
+                            for embedding_text in embedding_texts:
+                                embedding = await embedding_service.create_embedding(embedding_text)
+                                code_embeddings.append(embedding)
+                        
+                        # Generate metadata
+                        for i, code_block in enumerate(code_blocks):
                             code_metadatas.append({
                                 'language': code_block['language'],
                                 'char_count': len(code_block['code']),
-                                'summary': summary
+                                'summary': code_summaries[i]
                             })
                         
                         # Store code examples
@@ -274,6 +407,7 @@ async def smart_crawl_url(
         
         return json.dumps({
             "success": True,
+            "crawl_id": crawl_id,
             "crawl_type": crawl_type,
             "urls_processed": len(processed_urls),
             "total_chunks_created": total_chunks_created,

@@ -1,7 +1,7 @@
 """Tests for embeddings service."""
 
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, AsyncMock
 import openai
 from types import SimpleNamespace
 
@@ -16,7 +16,18 @@ def embedding_service(test_settings):
 
 @pytest.fixture
 def mock_openai_response():
-    """Mock OpenAI embeddings response."""
+    """Mock OpenAI embeddings response with 2 embeddings."""
+    mock_response = Mock()
+    mock_response.data = [
+        Mock(embedding=[0.1] * 1536),
+        Mock(embedding=[0.2] * 1536)
+    ]
+    return mock_response
+
+
+@pytest.fixture
+def mock_openai_response_three():
+    """Mock OpenAI embeddings response with 3 embeddings."""
     mock_response = Mock()
     mock_response.data = [
         Mock(embedding=[0.1] * 1536),
@@ -57,10 +68,15 @@ async def test_create_embeddings_batch_empty_list(embedding_service) -> None:
 async def test_create_embeddings_batch_rate_limit_retry(embedding_service) -> None:
     """Test retry logic on rate limit errors."""
     texts = ["hello", "world"]
+    
+    # Create a proper mock response for rate limit error
+    mock_response = Mock()
+    mock_response.request = Mock()
+    
     # Mock the create method to simulate a rate limit error on the first call
     mock_create = Mock(
         side_effect=[
-            openai.RateLimitError("Rate limit exceeded", response=None, body=None),
+            openai.RateLimitError("Rate limit exceeded", response=mock_response, body=None),
             # Create custom mock response with 2 embeddings
             SimpleNamespace(data=[
                 SimpleNamespace(embedding=[0.1] * 1536),
@@ -82,40 +98,60 @@ async def test_create_embeddings_batch_fallback_to_individual(embedding_service)
     """Test fallback to individual embeddings when batch fails."""
     texts = ["hello", "world", "foo"]
     
-    # Mock the create method to fail on batch but succeed on individual
+    # Mock the create method to fail on all 3 batch retries, then succeed on individual calls
     mock_individual_responses = [
         SimpleNamespace(data=[SimpleNamespace(embedding=[0.1] * 1536)]),
         SimpleNamespace(data=[SimpleNamespace(embedding=[0.4] * 1536)]),
         SimpleNamespace(data=[SimpleNamespace(embedding=[0.7] * 1536)])
     ]
-    mock_create = Mock(
-        side_effect=[Exception("Batch failed")] + mock_individual_responses
-    )
+    
+    def side_effect_func(*args, **kwargs):
+        if hasattr(side_effect_func, 'call_count'):
+            side_effect_func.call_count += 1
+        else:
+            side_effect_func.call_count = 1
+            
+        # First 3 calls are batch retries (all fail)
+        if side_effect_func.call_count <= 3:
+            raise Exception("Batch failed")
+        else:
+            # Individual calls succeed (calls 4, 5, 6)
+            return mock_individual_responses[side_effect_func.call_count - 4]
+    
     with patch.object(embedding_service.embedding_client.embeddings,
                       'create',
-                      new=mock_create):
+                      side_effect=side_effect_func):
 
         embeddings = await embedding_service.create_embeddings_batch(texts)
 
         assert len(embeddings) == 3
+        assert embeddings[0] == [0.1] * 1536
+        assert embeddings[1] == [0.4] * 1536
         assert embeddings[2] == [0.7] * 1536
-        # 1 call for batch, 3 for individual
-        assert embedding_service.embedding_client.embeddings.create.call_count == 4
 
 
 @pytest.mark.asyncio
 async def test_create_embeddings_batch_partial_failure(embedding_service) -> None:
     """Test partial failure where some individual embeddings also fail."""
     texts = ["success", "fail"]
-    # Mock create to fail on batch, then fail on one of the individual calls
-    mock_create = Mock(
-        side_effect=[
-            Exception("Batch failed"),
-            SimpleNamespace(data=[SimpleNamespace(embedding=[0.1] * 1536)]),
-            Exception("Individual embedding failed")
-        ]
-    )
-    with patch.object(embedding_service.embedding_client.embeddings, 'create', new=mock_create):
+    
+    def side_effect_func(*args, **kwargs):
+        if hasattr(side_effect_func, 'call_count'):
+            side_effect_func.call_count += 1
+        else:
+            side_effect_func.call_count = 1
+            
+        # First 3 calls are batch retries (all fail)
+        if side_effect_func.call_count <= 3:
+            raise Exception("Batch failed")
+        elif side_effect_func.call_count == 4:
+            # First individual call succeeds
+            return SimpleNamespace(data=[SimpleNamespace(embedding=[0.1] * 1536)])
+        else:
+            # Second individual call fails
+            raise Exception("Individual embedding failed")
+    
+    with patch.object(embedding_service.embedding_client.embeddings, 'create', side_effect=side_effect_func):
         embeddings = await embedding_service.create_embeddings_batch(texts)
 
         assert len(embeddings) == 2
@@ -124,7 +160,7 @@ async def test_create_embeddings_batch_partial_failure(embedding_service) -> Non
 
 
 @pytest.mark.asyncio
-async def test_create_embedding_success(embedding_service, mock_openai_response) -> None:
+async def test_create_embedding_success(embedding_service) -> None:
     """Test successful creation of a single embedding."""
     mock_response = SimpleNamespace(data=[SimpleNamespace(embedding=[0.1] * 1536)])
     with patch.object(embedding_service.embedding_client.embeddings, 'create', return_value=mock_response):
@@ -195,13 +231,28 @@ async def test_process_chunks_with_context_success(embedding_service, mock_chat_
 
 
 @pytest.mark.asyncio
-async def test_process_chunks_with_context_mixed_results(embedding_service, mock_chat_response) -> None:
+async def test_process_chunks_with_context_mixed_results(embedding_service) -> None:
     """Test processing chunks with mixed success/failure."""
-    # First and third succeed, second fails
+    # Create mock responses that fail based on the chunk content (deterministic)
+    mock_success_response = Mock()
+    mock_success_response.choices = [
+        Mock(message=Mock(content="This chunk discusses the main topic of the document."))
+    ]
+    
+    def create_side_effect(*args, **kwargs):
+        # Check the content of the message to determine if it should fail
+        messages = kwargs.get('messages', [])
+        if len(messages) > 1:
+            user_message = messages[1].get('content', '')
+            # Fail specifically for chunk2
+            if 'chunk2' in user_message:
+                raise Exception("API error")
+        return mock_success_response
+    
     with patch.object(
         embedding_service.client.chat.completions,
         'create',
-        side_effect=[mock_chat_response, Exception("API error"), mock_chat_response]
+        side_effect=create_side_effect
     ):
         chunks = [
             ("url1", "chunk1", "full_doc1"),
@@ -215,7 +266,7 @@ async def test_process_chunks_with_context_mixed_results(embedding_service, mock
         # First chunk succeeded
         assert results[0][1] is True
         assert "This chunk discusses the main topic of the document." in results[0][0]
-        # Second chunk failed
+        # Second chunk failed - should return original chunk
         assert results[1][1] is False
         assert results[1][0] == "chunk2"
         # Third chunk succeeded

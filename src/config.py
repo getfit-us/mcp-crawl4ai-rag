@@ -51,11 +51,19 @@ class Settings(BaseSettings):
     
     # Embedding Configuration
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
-    embedding_dimensions: int = os.getenv("EMBEDDING_DIMENSIONS", 1536)
+    embedding_dimensions: int = int(os.getenv("EMBEDDING_DIMENSIONS", "1536"))
     embedding_service_type: str = os.getenv("EMBEDDING_SERVICE_TYPE", "huggingface")  # "openai", "huggingface", "custom"
     custom_embedding_url: Optional[str] = os.getenv("CUSTOM_EMBEDDING_URL")  
     embedding_api_key: Optional[str] = os.getenv("EMBEDDING_API_KEY")
     embedding_organization: Optional[str] = os.getenv("EMBEDDING_ORGANIZATION")
+    
+    # Batch Processing Configuration
+    enable_batch_embeddings: bool = os.getenv("ENABLE_BATCH_EMBEDDINGS", "true") == "true"
+    embedding_batch_size: int = int(os.getenv("EMBEDDING_BATCH_SIZE", "100"))
+    enable_batch_summaries: bool = os.getenv("ENABLE_BATCH_SUMMARIES", "false") == "true"
+    summary_batch_size: int = int(os.getenv("SUMMARY_BATCH_SIZE", "10"))
+    enable_batch_contextual_embeddings: bool = os.getenv("ENABLE_BATCH_CONTEXTUAL_EMBEDDINGS", "false") == "true"
+    contextual_embedding_batch_size: int = int(os.getenv("CONTEXTUAL_EMBEDDING_BATCH_SIZE", "20"))
     
     # Reranking Configuration
     reranker_model: str = os.getenv("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")

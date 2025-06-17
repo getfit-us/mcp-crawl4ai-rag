@@ -62,6 +62,14 @@ def mock_services():
         crawling_instance.extract_source_summary = AsyncMock(return_value="Test source summary")
         crawling_instance.extract_code_blocks = Mock(return_value=[])
         crawling_instance.generate_code_example_summary = AsyncMock(return_value="Code summary")
+        
+        # Mock the new cancellation methods
+        crawling_instance.start_crawl_operation = AsyncMock(return_value="test-crawl-id-123")
+        crawling_instance.finish_crawl_operation = AsyncMock(return_value=None)
+        crawling_instance.cancel_crawl_operation = AsyncMock(return_value=True)
+        crawling_instance.cancel_all_crawl_operations = AsyncMock(return_value=0)
+        crawling_instance.get_active_crawl_operations = AsyncMock(return_value={})
+        
         MockCrawling.return_value = crawling_instance
         
         # Mock text processor
@@ -104,7 +112,7 @@ async def test_smart_crawl_recursive(mock_context, mock_services) -> None:
     
     # Verify crawling service was called correctly
     mock_services['crawling'].crawl_recursive_internal_links.assert_called_once_with(
-        ["https://example.com"], max_depth=3, max_concurrent=5
+        ["https://example.com"], max_depth=3, max_concurrent=5, crawl_id="test-crawl-id-123"
     )
 
 
@@ -126,7 +134,7 @@ async def test_smart_crawl_txt_file(mock_context, mock_services) -> None:
     
     # Verify txt file crawling was used
     mock_services['crawling'].is_txt.assert_called_with("https://example.com/file.txt")
-    mock_services['crawling'].crawl_markdown_file.assert_called_once()
+    mock_services['crawling'].crawl_markdown_file.assert_called_once_with("https://example.com/file.txt", "test-crawl-id-123")
 
 
 @pytest.mark.asyncio
@@ -154,7 +162,10 @@ async def test_smart_crawl_sitemap(mock_context, mock_services) -> None:
     # Verify sitemap crawling was used
     mock_services['crawling'].is_sitemap.assert_called_with("https://example.com/sitemap.xml")
     mock_services['crawling'].parse_sitemap.assert_called_once()
-    mock_services['crawling'].crawl_batch.assert_called_once()
+    mock_services['crawling'].crawl_batch.assert_called_once_with(
+        ["https://example.com/page1", "https://example.com/page2"], 
+        max_concurrent=10, crawl_id="test-crawl-id-123"
+    )
 
 
 @pytest.mark.asyncio
@@ -346,5 +357,5 @@ async def test_sitemap_crawl_batch_failure(mock_context, mock_services) -> None:
     # Verify crawl_batch was called with the parsed URLs
     mock_services['crawling'].crawl_batch.assert_called_once_with(
         ["https://example.com/page1", "https://example.com/page2"],
-        max_concurrent=10
+        max_concurrent=10, crawl_id="test-crawl-id-123"
     )

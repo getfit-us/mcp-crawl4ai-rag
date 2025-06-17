@@ -136,6 +136,7 @@ async def run_server() -> None:
     from crawl4ai_mcp.tools.get_available_sources import get_available_sources  # noqa: F401
     from crawl4ai_mcp.tools.perform_rag_query import perform_rag_query  # noqa: F401
     from crawl4ai_mcp.tools.search_code_examples import search_code_examples  # noqa: F401
+    from crawl4ai_mcp.tools.cancel_crawl import cancel_crawl, cancel_all_crawls, get_active_crawls  # noqa: F401
     
     logger.info(f"Starting MCP server on {settings.host}:{settings.port}")
     logger.info(f"Transport: {settings.transport}")
