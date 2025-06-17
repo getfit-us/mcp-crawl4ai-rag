@@ -108,6 +108,7 @@ class EmbeddingService:
                     lambda: self.embedding_client.embeddings.create(
                         model=self.settings.embedding_model,
                         input=texts,
+                        dimensions=1536
                     )
                 )
                 
@@ -148,7 +149,7 @@ class EmbeddingService:
                                 lambda t=text: self.embedding_client.embeddings.create(
                                     model=self.settings.embedding_model,
                                     input=[t],
-                                    dimensions=self.settings.embedding_dimensions
+                                    dimensions=1536
                                 )
                             )
                             individual_embedding = individual_response.data[0].embedding
@@ -169,12 +170,12 @@ class EmbeddingService:
                         except Exception as ind_e:
                             logger.error(f"Error creating embedding for text {i}: {ind_e}")
                             # Return zero embedding for failed texts
-                            embeddings.append([0.0] * self.settings.embedding_dimensions)
+                            embeddings.append([0.0] * 1536)
                     
                     return embeddings
         
         # Should not reach here, but return empty embeddings if we do
-        return [[0.0] * self.settings.embedding_dimensions for _ in texts]
+        return [[0.0] * 1536 for _ in texts]
     
     async def create_embedding(self, text: str) -> List[float]:
         """
@@ -192,7 +193,7 @@ class EmbeddingService:
         except Exception as e:
             logger.error(f"Error creating embedding: {e}")
             # Return zero embedding if there's an error
-            return [0.0] * self.settings.embedding_dimensions
+            return [0.0] * 1536
     
     async def generate_contextual_embedding(
         self,
