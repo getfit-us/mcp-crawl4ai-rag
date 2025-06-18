@@ -55,6 +55,8 @@ def mock_services():
         
         # Mock database service
         database_instance = Mock()
+        # Add the missing check_source_exists method
+        database_instance.check_source_exists = AsyncMock(return_value={"exists": False, "total_chunks": 0})
         database_instance.update_source_info = AsyncMock(return_value={"success": True})
         database_instance.add_documents = AsyncMock(return_value={"success": True, "count": 3})
         database_instance.add_code_examples = AsyncMock(return_value={"success": True, "count": 2})

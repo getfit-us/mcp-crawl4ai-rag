@@ -147,6 +147,8 @@ async def run_server() -> None:
     # Run based on transport
     if settings.transport == "stdio":
         await server.run_stdio_async()
+    elif settings.transport == "sse":
+        await server.run(transport="sse", host=settings.host, port=settings.port)
     else:
-        # SSE transport
-        await server.run_sse_async()
+        # streamable-http transport (default)
+        await server.run(transport="streamable-http", host=settings.host, port=settings.port)

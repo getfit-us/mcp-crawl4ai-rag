@@ -143,7 +143,7 @@ Create a `.env` file in the project root with the following variables:
 # MCP Server Configuration
 HOST=0.0.0.0
 PORT=8051
-TRANSPORT=sse
+TRANSPORT=streamable-http  # Options: "stdio", "sse", "streamable-http"
 
 # OpenAI API Configuration
 LLM_MODEL_API_KEY=your_openai_api_key
@@ -382,7 +382,28 @@ If you encounter a `ConnectionRefusedError` when starting the server, it means t
 
 ## Integration with MCP Clients
 
-### SSE Configuration
+### Transport Options
+
+The MCP server supports three transport methods:
+
+#### 1. Streamable HTTP Configuration (Recommended for MCP 1.9.4+)
+
+For the latest streamable HTTP transport support:
+
+```json
+{
+  "mcpServers": {
+    "crawl4ai-rag": {
+      "transport": "streamable-http",
+      "url": "http://localhost:8051"
+    }
+  }
+}
+```
+
+Set `TRANSPORT=streamable-http` in your `.env` file and start the server normally.
+
+#### 2. SSE Configuration
 
 Once you have the server running with SSE transport, you can connect to it using this configuration:
 
@@ -411,7 +432,7 @@ Once you have the server running with SSE transport, you can connect to it using
 >
 > **Note for Docker users**: Use `host.docker.internal` instead of `localhost` if your client is running in a different container. This will apply if you are using this MCP server within n8n!
 
-### Stdio Configuration
+#### 3. Stdio Configuration
 
 Add this server to your MCP configuration for Claude Desktop, Windsurf, or any other MCP client:
 

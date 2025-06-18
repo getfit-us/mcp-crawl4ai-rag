@@ -11,20 +11,21 @@ load_dotenv()
 
 class Settings(BaseSettings):
     """Application settings with validation."""
-    
+
     # MCP Server Configuration
     host: str = os.getenv("HOST", "0.0.0.0")
     port: int = os.getenv("PORT", 8051)
-    transport: str = os.getenv("TRANSPORT", "sse")  # Server-Sent Events
-    
+    transport: str = os.getenv(
+        "TRANSPORT", "streamable-http"
+    )  # Options: "stdio", "sse", "streamable-http"
+
     # LLM Configuration - REQUIRED
     openai_api_key: str = os.getenv("LLM_MODEL_API_KEY", "test-key")
     openai_base_url: Optional[str] = os.getenv("SUMMARY_LLM_BASE_URL")  # Custom base URL for OpenAI-compatible endpoints
     openai_organization: Optional[str] = os.getenv("OPENAI_ORGANIZATION")  # Organization ID for OpenAI
     summary_llm_model: str = os.getenv("SUMMARY_LLM_MODEL", "gpt-4o-mini")
     disable_thinking: bool = os.getenv("DISABLE_THINKING", "false") == "true"  # Disable thinking on think models (adds /no_think to prompt)
-    
-    
+
     # PostgreSQL Configuration - REQUIRED if using Local Postgres instead of Supabase
     postgres_host: str = os.getenv("POSTGRES_HOST", "localhost")
     postgres_port: int = os.getenv("POSTGRES_PORT", 5432)
@@ -32,24 +33,24 @@ class Settings(BaseSettings):
     postgres_user: str = os.getenv("POSTGRES_USER")
     postgres_password: str = os.getenv("POSTGRES_PASSWORD")
     postgres_sslmode: str = os.getenv("POSTGRES_SSLMODE", "prefer")
-    
+
     # Feature Flags
     use_contextual_embeddings: bool = os.getenv("USE_CONTEXTUAL_EMBEDDINGS", "false") == "true"
     use_hybrid_search: bool = os.getenv("USE_HYBRID_SEARCH", "false") == "true"
     use_reranking: bool = os.getenv("USE_RERANKING", "false") == "true"
     use_agentic_rag: bool = os.getenv("USE_AGENTIC_RAG", "false") == "true"  # For code example extraction
-    
+
     # Crawling Configuration
     default_max_depth: int = 3
     default_max_concurrent: int = 10
     default_chunk_size: int = 5000
     default_overlap: int = 200
-    
+
     # Search Configuration
     default_num_results: int = 5
     default_semantic_threshold: float = 0.5
     default_rerank_threshold: float = 0.3
-    
+
     # Embedding Configuration
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
     embedding_dimensions: int = int(os.getenv("EMBEDDING_DIMENSIONS", "1536"))
@@ -57,7 +58,7 @@ class Settings(BaseSettings):
     custom_embedding_url: Optional[str] = os.getenv("CUSTOM_EMBEDDING_URL")  
     embedding_api_key: Optional[str] = os.getenv("EMBEDDING_API_KEY")
     embedding_organization: Optional[str] = os.getenv("EMBEDDING_ORGANIZATION")
-    
+
     # Batch Processing Configuration
     enable_batch_embeddings: bool = os.getenv("ENABLE_BATCH_EMBEDDINGS", "true") == "true"
     embedding_batch_size: int = int(os.getenv("EMBEDDING_BATCH_SIZE", "100"))
@@ -65,18 +66,18 @@ class Settings(BaseSettings):
     summary_batch_size: int = int(os.getenv("SUMMARY_BATCH_SIZE", "10"))
     enable_batch_contextual_embeddings: bool = os.getenv("ENABLE_BATCH_CONTEXTUAL_EMBEDDINGS", "true") == "true"
     contextual_embedding_batch_size: int = int(os.getenv("CONTEXTUAL_EMBEDDING_BATCH_SIZE", "20"))
-    
+
     # Reranking Configuration
     reranker_model: str = os.getenv("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
     custom_reranker_url: Optional[str] = os.getenv("CUSTOM_RERANKER_URL", None)  # For custom reranking model URLs
     reranker_model_local_path: Optional[str] = os.getenv("RERANKER_MODEL_LOCAL_PATH", None)  
-    
+
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
     )
-    
+
     def validate_required_fields(self) -> None:
         """Validate that all required fields are set."""
         if not self.openai_api_key:
@@ -85,7 +86,12 @@ class Settings(BaseSettings):
             raise ValueError("POSTGRES_USER is required")
         if not self.postgres_password:
             raise ValueError("POSTGRES_PASSWORD is required")
-    
+
+        # Validate transport type
+        valid_transports = {"stdio", "sse", "streamable-http"}
+        if self.transport not in valid_transports:
+            raise ValueError(f"TRANSPORT must be one of {valid_transports}, got: {self.transport}")
+
     @property
     def postgres_dsn(self) -> str:
         """Get PostgreSQL connection string."""
