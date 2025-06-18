@@ -71,7 +71,7 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[CrawlContext]:
     reranking_model = None
     if settings.use_reranking:
         try:
-            reranking_model = CrossEncoder(settings.cross_encoder_model)
+            reranking_model = CrossEncoder(settings.reranker_model)
         except Exception as e:
             logger.warning(f"Failed to load reranking model: {e}")
             reranking_model = None
@@ -100,9 +100,7 @@ def create_mcp_server() -> FastMCP:
     return FastMCP(
         "mcp-crawl4ai-rag",
         description="MCP server for RAG and web crawling with Crawl4AI",
-        lifespan=crawl4ai_lifespan,
-        host=settings.host,
-        port=settings.port
+        lifespan=crawl4ai_lifespan
     )
 
 
@@ -126,29 +124,4 @@ class MCPProxy:
 mcp = MCPProxy()
 
 
-async def run_server() -> None:
-    """Run the MCP server."""
-    settings = get_settings()
-    
-    # Import tools here to avoid circular imports
-    from crawl4ai_mcp.tools.crawl_single_page import crawl_single_page  # noqa: F401
-    from crawl4ai_mcp.tools.smart_crawl_url import smart_crawl_url  # noqa: F401
-    from crawl4ai_mcp.tools.get_available_sources import get_available_sources  # noqa: F401
-    from crawl4ai_mcp.tools.perform_rag_query import perform_rag_query  # noqa: F401
-    from crawl4ai_mcp.tools.search_code_examples import search_code_examples  # noqa: F401
-    from crawl4ai_mcp.tools.cancel_crawl import cancel_crawl, cancel_all_crawls, get_active_crawls  # noqa: F401
-    
-    logger.info(f"Starting MCP server on {settings.host}:{settings.port}")
-    logger.info(f"Transport: {settings.transport}")
-    
-    # Get the MCP server instance
-    server = get_mcp_server()
-    
-    # Run based on transport
-    if settings.transport == "stdio":
-        await server.run_stdio_async()
-    elif settings.transport == "sse":
-        await server.run(transport="sse", host=settings.host, port=settings.port)
-    else:
-        # streamable-http transport (default)
-        await server.run(transport="streamable-http", host=settings.host, port=settings.port)
+
