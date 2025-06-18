@@ -299,6 +299,66 @@ class DatabaseService:
                 logger.error(f"Error updating source info: {e}")
                 return {"success": False, "error": str(e)}
     
+    async def check_source_exists(self, source_id: str) -> Dict[str, Any]:
+        """
+        Check if a source already has content in the database.
+        
+        Args:
+            source_id: The source ID (domain) to check
+            
+        Returns:
+            Dictionary with existence info and statistics
+        """
+        async with self.pool.acquire() as conn:
+            try:
+                # Check if source exists and get stats
+                result = await conn.fetchrow("""
+                    SELECT 
+                        s.source_id,
+                        s.summary,
+                        s.total_word_count,
+                        s.updated_at,
+                        s.created_at,
+                        COALESCE(cp_stats.doc_count, 0) as doc_count,
+                        COALESCE(cp_stats.chunk_count, 0) as chunk_count,
+                        COALESCE(ce_stats.code_count, 0) as code_count
+                    FROM sources s
+                    LEFT JOIN (
+                        SELECT 
+                            source_id,
+                            COUNT(DISTINCT url) as doc_count,
+                            COUNT(id) as chunk_count
+                        FROM crawled_pages
+                        GROUP BY source_id
+                    ) cp_stats ON s.source_id = cp_stats.source_id
+                    LEFT JOIN (
+                        SELECT 
+                            source_id,
+                            COUNT(DISTINCT url) as code_count
+                        FROM code_examples
+                        GROUP BY source_id
+                    ) ce_stats ON s.source_id = ce_stats.source_id
+                    WHERE s.source_id = $1
+                """, source_id)
+                
+                if result:
+                    return {
+                        "exists": True,
+                        "source_id": result['source_id'],
+                        "total_documents": result['doc_count'] or 0,
+                        "total_chunks": result['chunk_count'] or 0,
+                        "total_code_examples": result['code_count'] or 0,
+                        "word_count": result['total_word_count'] or 0,
+                        "last_updated": result['updated_at'] or result['created_at'],
+                        "summary": result['summary']
+                    }
+                else:
+                    return {"exists": False, "source_id": source_id}
+                    
+            except Exception as e:
+                logger.error(f"Error checking source existence: {e}")
+                return {"exists": False, "source_id": source_id, "error": str(e)}
+
     async def get_available_sources(self) -> List[SourceInfo]:
         """
         Get all available sources from the database.

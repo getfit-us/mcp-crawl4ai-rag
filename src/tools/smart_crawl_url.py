@@ -24,7 +24,8 @@ async def smart_crawl_url(
     url: str, 
     max_depth: int = 3, 
     max_concurrent: int = 10,
-    chunk_size: int = 5000
+    chunk_size: int = 5000,
+    force_recrawl: bool = False
 ) -> str:
     """
     Intelligently crawl websites based on URL type and store content in PostgreSQL.
@@ -43,6 +44,7 @@ async def smart_crawl_url(
         max_depth: Maximum crawling depth for recursive crawling (1-10)
         max_concurrent: Maximum number of concurrent requests (1-50)
         chunk_size: Maximum size of each content chunk (default: 5000)
+        force_recrawl: Whether to force re-crawling if content already exists (default: False)
     
     Returns:
         Summary of the crawling operation including pages crawled and chunks stored
@@ -69,6 +71,47 @@ async def smart_crawl_url(
             actual_chunk_size = chunk_size
         else:
             actual_chunk_size = settings.default_chunk_size
+        
+        # Check if content already exists for this source (unless forcing recrawl)
+        if not force_recrawl:
+            # For different URL types, we need to determine what source(s) to check
+            sources_to_check = []
+            
+            if crawling_service.is_txt(url):
+                # For txt files, check the domain of the file itself
+                sources_to_check.append(urlparse(url).netloc)
+            elif crawling_service.is_sitemap(url):
+                # For sitemaps, we could potentially check the sitemap domain
+                # But since sitemaps can contain URLs from multiple domains,
+                # we'll check the sitemap domain itself as a proxy
+                sources_to_check.append(urlparse(url).netloc)
+            else:
+                # For regular URLs, check the domain
+                sources_to_check.append(urlparse(url).netloc)
+            
+            # Check if any of the sources already have content
+            for source_id in sources_to_check:
+                existing_source = await database_service.check_source_exists(source_id)
+                
+                if existing_source["exists"] and existing_source.get("total_chunks", 0) > 0:
+                    # Source has existing content, return early
+                    return json.dumps({
+                        "success": False,
+                        "already_exists": True,
+                        "source_id": source_id,
+                        "existing_stats": {
+                            "total_documents": existing_source.get("total_documents", 0),
+                            "total_chunks": existing_source.get("total_chunks", 0),
+                            "total_code_examples": existing_source.get("total_code_examples", 0),
+                            "word_count": existing_source.get("word_count", 0),
+                            "last_updated": str(existing_source.get("last_updated", "Unknown")),
+                            "summary": existing_source.get("summary", "No summary available")
+                        },
+                        "message": f"Content for {source_id} already exists in database. Use force_recrawl=true to overwrite existing content.",
+                        "url": url
+                    })
+        else:
+            logger.info(f"Force recrawl enabled for {url}. Proceeding with crawl...")
         
         # Determine URL type and crawl accordingly
         all_results = []
@@ -432,6 +475,8 @@ async def smart_crawl_url(
         success_message = f"Successfully crawled {len(processed_urls)} URLs using {crawl_type} strategy"
         if failed_urls:
             success_message += f" ({len(failed_urls)} URLs failed)"
+        if force_recrawl:
+            success_message += " (forced re-crawl)"
         
         return json.dumps({
             "success": True,
@@ -442,6 +487,7 @@ async def smart_crawl_url(
             "total_chunks_created": total_chunks_created,
             "total_code_examples": total_code_examples,
             "sources_updated": list(source_ids),
+            "force_recrawl": force_recrawl,
             "message": success_message
         })
         
