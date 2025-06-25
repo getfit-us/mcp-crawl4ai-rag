@@ -128,21 +128,11 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[CrawlContext]:
     
     settings = get_settings()
     
-    # Create browser configuration focused on process cleanup (not interfering with Crawl4AI defaults)
-    cleanup_chrome_args = []
-    
-    # Only add process isolation flags if explicitly enabled
-    if getattr(settings, 'browser_process_isolation', False):
-        cleanup_chrome_args.extend([
-            '--no-zygote',           # Prevent zygote process creation
-            '--single-process',      # Use single process mode for easier cleanup
-        ])
-    
+    # Use default browser configuration, let Crawl4AI handle all browser management
     browser_config = BrowserConfig(
         headless=getattr(settings, 'browser_headless', True),
         verbose=False,
-        chrome_flags=cleanup_chrome_args,  # Minimal flags for cleanup only
-        # Let Crawl4AI manage its own timeouts - don't override
+        # Let Crawl4AI manage all browser settings and timeouts
     )
     
     # Initialize the crawler
