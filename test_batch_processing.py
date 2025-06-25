@@ -10,7 +10,6 @@ import asyncio
 import logging
 import os
 import time
-from typing import List
 
 # Configure environment variables for batch processing tests
 def setup_test_environment():

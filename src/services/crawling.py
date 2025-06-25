@@ -1,11 +1,10 @@
 """Crawling service for web content extraction and processing."""
 
 import asyncio
-import json
 import logging
 import requests
 import uuid
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse, urldefrag
 from xml.etree import ElementTree
 import re
@@ -23,6 +22,21 @@ MAX_FAILURES_TO_LOG = 5
 
 class CrawlCancelledException(Exception):
     """Exception raised when a crawl operation is cancelled."""
+    pass
+
+
+class BrowserOperationException(Exception):
+    """Exception raised when a browser operation fails."""
+    pass
+
+
+class BrowserTimeoutException(BrowserOperationException):
+    """Exception raised when a browser operation times out."""
+    pass
+
+
+class BrowserCrashException(BrowserOperationException):
+    """Exception raised when the browser crashes during operation."""
     pass
 
 
@@ -48,7 +62,39 @@ class CrawlingService:
         # Cancellation tracking
         self._active_crawls: Dict[str, Dict[str, Any]] = {}
         self._cancellation_events: Dict[str, asyncio.Event] = {}
+        
+        # Crawling coordination
         self._crawl_lock = asyncio.Lock()
+
+    async def _track_browser_operation(self, operation_func, *args, **kwargs) -> Any:
+        """
+        Execute a browser operation with basic error tracking (no timeouts or retries).
+        
+        This wrapper only tracks browser operations for cleanup purposes,
+        letting Crawl4AI handle its own timeouts and retry logic.
+        
+        Args:
+            operation_func: The browser operation function to execute
+            *args, **kwargs: Arguments to pass to the operation function
+            
+        Returns:
+            Result of the browser operation
+        """
+        try:
+            # Let Crawl4AI handle its own timing and retry logic
+            result = await operation_func(*args, **kwargs)
+            return result
+            
+        except Exception as e:
+            # Log browser-related errors for monitoring, but don't interfere
+            error_str = str(e).lower()
+            if any(indicator in error_str for indicator in [
+                'browser', 'chrome', 'connection', 'session', 'target', 'websocket'
+            ]):
+                logger.warning(f"Browser-related error detected (letting Crawl4AI handle): {e}")
+            
+            # Re-raise the original exception for Crawl4AI to handle
+            raise
     
     async def start_crawl_operation(self, operation_type: str, urls: List[str]) -> str:
         """
@@ -234,7 +280,9 @@ class CrawlingService:
             
         crawl_config = CrawlerRunConfig()
 
-        result = await self.crawler.arun(url=url, config=crawl_config)
+        result = await self._track_browser_operation(
+            self.crawler.arun, url=url, config=crawl_config
+        )
         if result.success and result.markdown:
             return [{'url': url, 'markdown': result.markdown}]
         else:
@@ -269,7 +317,9 @@ class CrawlingService:
             if crawl_id:
                 self._check_cancellation(crawl_id)
                 
-            results = await self.crawler.arun_many(urls=urls, config=crawl_config, dispatcher=dispatcher)
+            results = await self._track_browser_operation(
+                self.crawler.arun_many, urls=urls, config=crawl_config, dispatcher=dispatcher
+            )
             logger.debug(f"arun_many returned {len(results)} results")
             
             # Check for cancellation after crawling
@@ -337,7 +387,9 @@ class CrawlingService:
             if not urls_to_crawl:
                 break
 
-            results = await self.crawler.arun_many(urls=urls_to_crawl, config=run_config, dispatcher=dispatcher)
+            results = await self._track_browser_operation(
+                self.crawler.arun_many, urls=urls_to_crawl, config=run_config, dispatcher=dispatcher
+            )
             next_level_urls = set()
 
             for result in results:
@@ -650,11 +702,11 @@ class CrawlingService:
             
             # Major header
             if re.match(r'^#{1,3}\s+', line):
-                return search_start + sum(len(l) + 1 for l in lines[:i])
+                return search_start + sum(len(line_text) + 1 for line_text in lines[:i])
             
             # Horizontal rule
             if re.match(r'^-{3,}|^\*{3,}|^_{3,}', line):
-                return search_start + sum(len(l) + 1 for l in lines[:i+1])
+                return search_start + sum(len(line_text) + 1 for line_text in lines[:i+1])
         
         return search_start
     
@@ -671,11 +723,11 @@ class CrawlingService:
             
             # Major header (start of new section)
             if re.match(r'^#{1,3}\s+', line) and i > 5:  # Allow some buffer
-                return end_pos + sum(len(l) + 1 for l in lines[:i])
+                return end_pos + sum(len(line_text) + 1 for line_text in lines[:i])
             
             # Horizontal rule
             if re.match(r'^-{3,}|^\*{3,}|^_{3,}', line) and i > 5:
-                return end_pos + sum(len(l) + 1 for l in lines[:i])
+                return end_pos + sum(len(line_text) + 1 for line_text in lines[:i])
         
         return search_end
     

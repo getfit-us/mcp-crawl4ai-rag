@@ -95,14 +95,6 @@ class EmbeddingService:
                 # Run synchronous OpenAI call in thread pool
                 loop = asyncio.get_event_loop()
                 
-                # Prepare parameters for embedding creation
-                embedding_params = {
-                    "model": self.settings.embedding_model,
-                    "input": texts
-                }
-                
-               
-                
                 response = await loop.run_in_executor(
                     None,
                     lambda: self.embedding_client.embeddings.create(
@@ -353,7 +345,6 @@ Please give a short succinct context to situate this chunk within the whole docu
             
             # Process batch requests
             loop = asyncio.get_event_loop()
-            results = []
             
             # For now, process in parallel but we could enhance this to use batch API when available
             tasks = []

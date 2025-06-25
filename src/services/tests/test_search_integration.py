@@ -3,7 +3,6 @@
 import pytest
 import asyncpg
 import os
-from unittest.mock import Mock
 
 # Make sure to load environment variables for the database connection
 from dotenv import load_dotenv
@@ -14,7 +13,6 @@ from crawl4ai_mcp.services.database import DatabaseService
 from crawl4ai_mcp.services.embeddings import EmbeddingService
 from crawl4ai_mcp.config import get_settings
 from crawl4ai_mcp.mcp_server import get_postgres_pool
-from crawl4ai_mcp.models import SearchResult
 
 
 # This fixture is to ensure that the test is skipped if no real DB is configured

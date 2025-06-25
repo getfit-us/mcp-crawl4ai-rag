@@ -1,6 +1,5 @@
 """Search service for document and code example retrieval."""
 
-import json
 import logging
 from typing import Any, Dict, List, Optional
 

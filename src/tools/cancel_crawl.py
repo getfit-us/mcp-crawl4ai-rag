@@ -2,7 +2,6 @@
 
 import json
 import logging
-from typing import Optional
 
 from mcp.server.fastmcp import Context
 

@@ -65,9 +65,6 @@ async def test_get_available_sources_success(mock_context, mock_database_service
     result = await get_available_sources(mock_context)
     result_data = json.loads(result)
     
-    # Debug print to see what's returned
-    if not result_data.get("success"):
-        print(f"Error in result: {result_data}")
     
     assert result_data["success"] is True
     assert result_data["total_sources"] == 2

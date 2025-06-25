@@ -31,7 +31,6 @@ def get_test_database_url() -> str:
 async def postgres_pool() -> AsyncGenerator[asyncpg.Pool, None]:
     """Create a connection pool to the test PostgreSQL database."""
     database_url = get_test_database_url()
-    print(f"Connecting to PostgreSQL: {database_url}")  # Debug output
     
     try:
         # Define connection initialization function to register vector types and JSONB codec

@@ -28,13 +28,14 @@ def main() -> None:
     from crawl4ai_mcp.tools.perform_rag_query import perform_rag_query  # noqa: F401
     from crawl4ai_mcp.tools.search_code_examples import search_code_examples  # noqa: F401
     from crawl4ai_mcp.tools.cancel_crawl import cancel_crawl, cancel_all_crawls, get_active_crawls  # noqa: F401
+    from crawl4ai_mcp.tools.browser_health import get_browser_status, cleanup_browser_processes, get_browser_configuration  # noqa: F401
     
     settings = get_settings()
     server = get_mcp_server()
     
     logger.info(f"Starting MCP server on {settings.host}:{settings.port}")
     logger.info(f"Transport: {settings.transport}")
-    logger.warning(f"Note: FastMCP 2.8.1 uses its own default host/port settings")
+    logger.warning("Note: FastMCP 2.8.1 uses its own default host/port settings")
     
     # Use the synchronous run() method which handles the async context internally
     # Note: FastMCP 2.8.1 doesn't accept host/port as parameters, it uses its own defaults

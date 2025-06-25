@@ -1,7 +1,7 @@
 """Tests for embeddings service."""
 
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch
 import openai
 from types import SimpleNamespace
 

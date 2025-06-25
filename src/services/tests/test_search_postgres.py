@@ -12,7 +12,6 @@ from unittest.mock import Mock
 from crawl4ai_mcp.services.search import SearchService
 from crawl4ai_mcp.services.embeddings import EmbeddingService
 from crawl4ai_mcp.models import SearchRequest, SearchResult, SearchType
-from crawl4ai_mcp.config import get_settings
 
 # Set up the test environment variable for OpenAI API key
 os.environ["OPENAI_API_KEY"] = "test-key"

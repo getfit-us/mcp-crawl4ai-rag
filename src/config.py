@@ -1,6 +1,5 @@
 """Configuration management using Pydantic settings."""
 
-from pathlib import Path
 from typing import Optional
 from urllib.parse import quote_plus
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -14,7 +13,7 @@ class Settings(BaseSettings):
 
     # MCP Server Configuration
     host: str = os.getenv("HOST", "0.0.0.0")
-    port: int = os.getenv("PORT", 8051)
+    port: int = int(os.getenv("PORT", "8051"))
     transport: str = os.getenv(
         "TRANSPORT", "streamable-http"
     )  # Options: "stdio", "sse", "streamable-http"
@@ -28,10 +27,10 @@ class Settings(BaseSettings):
 
     # PostgreSQL Configuration - REQUIRED if using Local Postgres instead of Supabase
     postgres_host: str = os.getenv("POSTGRES_HOST", "localhost")
-    postgres_port: int = os.getenv("POSTGRES_PORT", 5432)
+    postgres_port: int = int(os.getenv("POSTGRES_PORT", "5432"))
     postgres_db: str = os.getenv("POSTGRES_DB", "crawl4ai_rag")
-    postgres_user: str = os.getenv("POSTGRES_USER")
-    postgres_password: str = os.getenv("POSTGRES_PASSWORD")
+    postgres_user: str = os.getenv("POSTGRES_USER", "")
+    postgres_password: str = os.getenv("POSTGRES_PASSWORD", "")
     postgres_sslmode: str = os.getenv("POSTGRES_SSLMODE", "prefer")
 
     # Feature Flags
@@ -45,6 +44,12 @@ class Settings(BaseSettings):
     default_max_concurrent: int = 10
     default_chunk_size: int = 5000
     default_overlap: int = 200
+
+    # Browser Cleanup Configuration (focused only on process cleanup, not operation timeouts)
+    browser_headless: bool = os.getenv("BROWSER_HEADLESS", "true") == "true"
+    browser_cleanup_timeout: int = int(os.getenv("BROWSER_CLEANUP_TIMEOUT", "10"))  # seconds for shutdown cleanup
+    browser_process_isolation: bool = os.getenv("BROWSER_PROCESS_ISOLATION", "false") == "true"  # Enable for easier cleanup
+    browser_auto_cleanup: bool = os.getenv("BROWSER_AUTO_CLEANUP", "true") == "true"  # Enable background cleanup
 
     # Search Configuration
     default_num_results: int = 5

@@ -3,13 +3,12 @@
 import json
 import logging
 import asyncio
-from typing import Any, Dict
 from urllib.parse import urlparse
 
 from mcp.server.fastmcp import Context
 
 from crawl4ai_mcp.mcp_server import mcp
-from crawl4ai_mcp.models import CrawlContext, CrawlResult, CrawlType
+from crawl4ai_mcp.models import CrawlContext
 from crawl4ai_mcp.services.crawling import CrawlingService, CrawlCancelledException
 from crawl4ai_mcp.services.database import DatabaseService
 from crawl4ai_mcp.services.embeddings import EmbeddingService
@@ -40,7 +39,6 @@ async def crawl_single_page(
     try:
         # Get context and services
         context: CrawlContext = ctx.request_context.lifespan_context
-        crawler = context.crawler
         postgres_pool = context.supabase_client  # Field name kept for compatibility
         settings = context.settings
         

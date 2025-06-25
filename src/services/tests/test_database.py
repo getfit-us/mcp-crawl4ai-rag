@@ -1,10 +1,8 @@
 """Tests for database service."""
 
 import pytest
-from unittest.mock import Mock
 
 from crawl4ai_mcp.services.database import DatabaseService
-from crawl4ai_mcp.models import SourceInfo
 
 
 @pytest.fixture

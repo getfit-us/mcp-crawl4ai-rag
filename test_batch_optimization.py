@@ -7,8 +7,6 @@ import asyncio
 import logging
 import time
 import os
-from unittest.mock import patch
-from urllib.parse import urlparse
 
 # Set the correct embedding URL for the test
 os.environ["CUSTOM_EMBEDDING_URL"] = "http://192.168.1.244:8080/v1"
@@ -16,7 +14,6 @@ os.environ["EMBEDDING_API_KEY"] = "123"
 
 from src.config import Settings
 from src.services.embeddings import EmbeddingService
-from src.services.crawling import CrawlingService
 from src.utilities.text_processing import TextProcessor
 
 # Setup logging to see batch processing in action

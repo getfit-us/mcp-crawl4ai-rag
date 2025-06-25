@@ -1,7 +1,5 @@
 """Database service for PostgreSQL operations with pgvector."""
 
-import asyncio
-import json
 import logging
 from typing import Any, Dict, List, Optional
 

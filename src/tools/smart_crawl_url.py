@@ -52,7 +52,6 @@ async def smart_crawl_url(
     try:
         # Get context and services
         context: CrawlContext = ctx.request_context.lifespan_context
-        crawler = context.crawler
         postgres_pool = context.supabase_client  # Field name kept for compatibility
         settings = context.settings
         

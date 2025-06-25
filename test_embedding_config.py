@@ -6,7 +6,7 @@ sys.path.insert(0, 'src')
 
 from crawl4ai_mcp.services.embeddings import EmbeddingService
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 import openai
 import pytest
 from crawl4ai_mcp.config import Settings

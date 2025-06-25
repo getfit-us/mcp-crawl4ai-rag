@@ -19,6 +19,7 @@ dependencies = [
     "pytest>=8.3.5",
     "pytest-asyncio>=1.0.0",
     "pydantic-settings>=2.9.1",
+    "psutil>=6.1.0",
 ]
 
 [project.scripts]
@@ -30,6 +31,7 @@ dev = [
     "mypy>=1.16.0",
     "pytest-cov>=6.1.1",
     "ruff>=0.11.13",
+    "types-psutil>=7.0.0.20250601",
     "types-requests>=2.32.0.20250602",
 ]
 
@@ -39,6 +41,9 @@ pythonpath = ["."]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = "-v --tb=short"
+markers = [
+    "integration: marks tests as integration tests (may require external resources)"
+]
 
 [tool.ruff]
 line-length = 88
