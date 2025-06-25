@@ -50,6 +50,38 @@ class EmbeddingService:
         """
         return text.replace("<think>", "").replace("</think>", "")
     
+    def truncate_text_for_embedding(self, text: str) -> str:
+        """
+        Truncate text to fit within embedding model token limits.
+        
+        Args:
+            text: The text to truncate
+            
+        Returns:
+            Truncated text that fits within token limits
+        """
+        max_chars = int(self.settings.embedding_max_tokens * self.settings.embedding_chars_per_token)
+        
+        if len(text) <= max_chars:
+            return text
+        
+        # Truncate and try to break at a reasonable boundary
+        truncated = text[:max_chars]
+        
+        # Try to break at sentence boundary
+        last_period = truncated.rfind('. ')
+        if last_period > max_chars * 0.8:  # Only if we don't lose too much content
+            truncated = truncated[:last_period + 1]
+        
+        # Try to break at paragraph boundary
+        elif '\n\n' in truncated:
+            last_para = truncated.rfind('\n\n')
+            if last_para > max_chars * 0.8:
+                truncated = truncated[:last_para]
+        
+        logger.warning(f"Text truncated from {len(text)} to {len(truncated)} characters for embedding")
+        return truncated
+    
     def _prepare_prompt_with_thinking_control(self, prompt: str) -> str:
         """
         Prepare prompt with /no_think prefix if thinking is disabled.
@@ -90,6 +122,9 @@ class EmbeddingService:
         if not texts:
             return []
         
+        # Truncate texts to fit within token limits
+        truncated_texts = [self.truncate_text_for_embedding(text) for text in texts]
+        
         for retry in range(self.max_retries):
             try:
                 # Run synchronous OpenAI call in thread pool
@@ -99,7 +134,7 @@ class EmbeddingService:
                     None,
                     lambda: self.embedding_client.embeddings.create(
                         model=self.settings.embedding_model,
-                        input=texts,
+                        input=truncated_texts,
                         dimensions=1536
                     )
                 )
@@ -133,7 +168,7 @@ class EmbeddingService:
                     
                     # Fall back to individual embeddings
                     embeddings = []
-                    for i, text in enumerate(texts):
+                    for i, text in enumerate(truncated_texts):
                         try:
                             loop = asyncio.get_event_loop()
                             individual_response = await loop.run_in_executor(
@@ -235,6 +270,8 @@ Please give a short succinct context to situate this chunk within the whole docu
             
             context = self.remove_think_tags(response.choices[0].message.content.strip())
             contextual_text = f"{context}\n---\n{chunk}"
+            # Truncate the contextual text to fit within embedding token limits
+            contextual_text = self.truncate_text_for_embedding(contextual_text)
             
             return contextual_text, True
             
@@ -372,6 +409,8 @@ Please give a short succinct context to situate this chunk within the whole docu
                     try:
                         context = self.remove_think_tags(responses[i].choices[0].message.content.strip())
                         contextual_text = f"{context}\n---\n{chunk}"
+                        # Truncate the contextual text to fit within embedding token limits
+                        contextual_text = self.truncate_text_for_embedding(contextual_text)
                         contextual_results.append((contextual_text, True))
                     except Exception as e:
                         logger.error(f"Error processing contextual embedding response for chunk {i}: {e}")

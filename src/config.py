@@ -63,6 +63,10 @@ class Settings(BaseSettings):
     custom_embedding_url: Optional[str] = os.getenv("CUSTOM_EMBEDDING_URL")  
     embedding_api_key: Optional[str] = os.getenv("EMBEDDING_API_KEY")
     embedding_organization: Optional[str] = os.getenv("EMBEDDING_ORGANIZATION")
+    
+    # Token limits for embedding models
+    embedding_max_tokens: int = int(os.getenv("EMBEDDING_MAX_TOKENS", "8000"))  # Safe limit below 8196
+    embedding_chars_per_token: float = float(os.getenv("EMBEDDING_CHARS_PER_TOKEN", "4.0"))  # Approx chars per token
 
     # Batch Processing Configuration
     enable_batch_embeddings: bool = os.getenv("ENABLE_BATCH_EMBEDDINGS", "true") == "true"

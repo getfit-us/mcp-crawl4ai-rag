@@ -164,6 +164,8 @@ Please give a short succinct context to situate this chunk within the overall do
                 context = context.strip()
                 # Combine the context with the original chunk
                 contextual_text = f"{context}\n---\n{chunk}"
+                # Truncate the contextual text to fit within embedding token limits
+                contextual_text = self.embedding_service.truncate_text_for_embedding(contextual_text)
                 return contextual_text, True
             
             logger.warning("Context generation returned empty content. Using original chunk instead.")
