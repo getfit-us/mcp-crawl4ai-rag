@@ -411,7 +411,6 @@ dependencies = [
     { name = "mcp" },
     { name = "openai" },
     { name = "pgvector" },
-    { name = "psutil" },
     { name = "pydantic-settings" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -425,7 +424,6 @@ dev = [
     { name = "mypy" },
     { name = "pytest-cov" },
     { name = "ruff" },
-    { name = "types-psutil" },
     { name = "types-requests" },
 ]
 
@@ -436,7 +434,6 @@ requires-dist = [
     { name = "mcp", specifier = "==1.9.4" },
     { name = "openai", specifier = "==1.71.0" },
     { name = "pgvector", specifier = ">=0.2.0" },
-    { name = "psutil", specifier = ">=6.1.0" },
     { name = "pydantic-settings", specifier = ">=2.9.1" },
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "pytest-asyncio", specifier = ">=1.0.0" },
@@ -450,7 +447,6 @@ dev = [
     { name = "mypy", specifier = ">=1.16.0" },
     { name = "pytest-cov", specifier = ">=6.1.1" },
     { name = "ruff", specifier = ">=0.11.13" },
-    { name = "types-psutil", specifier = ">=7.0.0.20250601" },
     { name = "types-requests", specifier = ">=2.32.0.20250602" },
 ]
 
@@ -2319,15 +2315,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/11/53/ce18470914ab6cfbec9384ee565d23c4d1c55f0548160b1c7b33000b11fd/triton-3.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b68c778f6c4218403a6bd01be7484f6dc9e20fe2083d22dd8aef33e3b87a10a3", size = 156504509 },
     { url = "https://files.pythonhosted.org/packages/7d/74/4bf2702b65e93accaa20397b74da46fb7a0356452c1bb94dbabaf0582930/triton-3.3.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:47bc87ad66fa4ef17968299acacecaab71ce40a238890acc6ad197c3abe2b8f1", size = 156516468 },
     { url = "https://files.pythonhosted.org/packages/0a/93/f28a696fa750b9b608baa236f8225dd3290e5aff27433b06143adc025961/triton-3.3.0-cp313-cp313t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ce4700fc14032af1e049005ae94ba908e71cd6c2df682239aed08e49bc71b742", size = 156580729 },
-]
-
-[[package]]
-name = "types-psutil"
-version = "7.0.0.20250601"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/c8/af/767b92be7de4105f5e2e87a53aac817164527c4a802119ad5b4e23028f7c/types_psutil-7.0.0.20250601.tar.gz", hash = "sha256:71fe9c4477a7e3d4f1233862f0877af87bff057ff398f04f4e5c0ca60aded197", size = 20297 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8d/85/864c663a924a34e0d87bd10ead4134bb4ab6269fa02daaa5dd644ac478c5/types_psutil-7.0.0.20250601-py3-none-any.whl", hash = "sha256:0c372e2d1b6529938a080a6ba4a9358e3dfc8526d82fabf40c1ef9325e4ca52e", size = 23106 },
 ]
 
 [[package]]

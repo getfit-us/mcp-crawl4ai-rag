@@ -45,11 +45,6 @@ class Settings(BaseSettings):
     default_chunk_size: int = 5000
     default_overlap: int = 200
 
-    # Browser Cleanup Configuration (focused only on process cleanup, not operation timeouts)
-    browser_headless: bool = os.getenv("BROWSER_HEADLESS", "true") == "true"
-    browser_cleanup_timeout: int = int(os.getenv("BROWSER_CLEANUP_TIMEOUT", "10"))  # seconds for shutdown cleanup
-    browser_process_isolation: bool = os.getenv("BROWSER_PROCESS_ISOLATION", "false") == "true"  # Enable for easier cleanup
-    browser_auto_cleanup: bool = os.getenv("BROWSER_AUTO_CLEANUP", "true") == "true"  # Enable background cleanup
 
     # Search Configuration
     default_num_results: int = 5

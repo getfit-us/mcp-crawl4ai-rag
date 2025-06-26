@@ -19,7 +19,6 @@ dependencies = [
     "pytest>=8.3.5",
     "pytest-asyncio>=1.0.0",
     "pydantic-settings>=2.9.1",
-    "psutil>=6.1.0",
 ]
 
 [project.scripts]
@@ -31,7 +30,6 @@ dev = [
     "mypy>=1.16.0",
     "pytest-cov>=6.1.1",
     "ruff>=0.11.13",
-    "types-psutil>=7.0.0.20250601",
     "types-requests>=2.32.0.20250602",
 ]
 
