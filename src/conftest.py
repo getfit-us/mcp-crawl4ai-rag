@@ -40,6 +40,8 @@ def test_settings() -> Any:
         default_num_results=5,
         default_semantic_threshold=0.5,
         default_rerank_threshold=0.3,
+        embedding_max_tokens=8000,
+        embedding_chars_per_token=4.0,
         postgres_host="localhost",
         postgres_port=5432,
         postgres_db="test_crawl4ai_rag",

@@ -21,6 +21,9 @@ def mock_embedding_service():
         return func()
     service._run_in_executor = mock_run_in_executor
     
+    # Mock truncate_text_for_embedding to return the input text unchanged
+    service.truncate_text_for_embedding = Mock(side_effect=lambda x: x)
+    
     return service
 
 
@@ -149,7 +152,11 @@ class TestContextualEmbedding:
         """Test successful contextual embedding generation."""
         # Mock OpenAI response
         mock_response = Mock()
-        mock_response.choices = [Mock(message=Mock(content="This chunk discusses the main topic."))]
+        mock_message = Mock()
+        mock_message.content = "This chunk discusses the main topic."
+        mock_choice = Mock()
+        mock_choice.message = mock_message
+        mock_response.choices = [mock_choice]
         mock_embedding_service.client.chat.completions.create.return_value = mock_response
         
         full_doc = "This is a document about AI. It covers many topics."
@@ -179,7 +186,11 @@ class TestContextualEmbedding:
         """Test chunk processing with context."""
         # Mock OpenAI response
         mock_response = Mock()
-        mock_response.choices = [Mock(message=Mock(content="Context for chunk"))]
+        mock_message = Mock()
+        mock_message.content = "Context for chunk"
+        mock_choice = Mock()
+        mock_choice.message = mock_message
+        mock_response.choices = [mock_choice]
         mock_embedding_service.client.chat.completions.create.return_value = mock_response
         
         result = await text_processor.process_chunk_with_context(
