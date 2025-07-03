@@ -44,17 +44,21 @@ class TextProcessor:
             return f"/no_think\n\n{prompt}"
         return prompt
     
-    def smart_chunk_markdown(self, text: str, chunk_size: int = 5000) -> List[str]:
+    def smart_chunk_markdown(self, text: str, chunk_size: int = 5000, overlap: int = 200) -> List[str]:
         """
-        Split text into chunks, respecting code blocks and paragraphs.
+        Split text into chunks with overlap, respecting code blocks and paragraphs.
         
         Args:
             text: Text to chunk
             chunk_size: Target size for each chunk
+            overlap: Number of characters to overlap between chunks
             
         Returns:
-            List of text chunks
+            List of text chunks with overlap
         """
+        if not text or not text.strip():
+            return []
+        
         chunks = []
         start = 0
         text_length = len(text)
@@ -65,36 +69,64 @@ class TextProcessor:
 
             # If we're at the end of the text, just take what's left
             if end >= text_length:
-                chunks.append(text[start:].strip())
+                remaining_chunk = text[start:].strip()
+                if remaining_chunk:
+                    chunks.append(remaining_chunk)
                 break
 
+            # Try to find a good break point within the chunk
+            chunk_candidate = text[start:end]
+            
             # Try to find a code block boundary first (```)
-            chunk = text[start:end]
-            code_block = chunk.rfind('```')
-            if code_block != -1 and code_block > chunk_size * 0.3:
-                end = start + code_block
-
+            code_block_idx = chunk_candidate.rfind('```')
+            if code_block_idx != -1 and code_block_idx > chunk_size * 0.3:
+                end = start + code_block_idx
+            
             # If no code block, try to break at a paragraph
-            elif '\n\n' in chunk:
+            elif '\n\n' in chunk_candidate:
                 # Find the last paragraph break
-                last_break = chunk.rfind('\n\n')
+                last_break = chunk_candidate.rfind('\n\n')
                 if last_break > chunk_size * 0.3:  # Only break if we're past 30% of chunk_size
                     end = start + last_break
-
+            
             # If no paragraph break, try to break at a sentence
-            elif '. ' in chunk:
+            elif '. ' in chunk_candidate:
                 # Find the last sentence break
-                last_period = chunk.rfind('. ')
+                last_period = chunk_candidate.rfind('. ')
                 if last_period > chunk_size * 0.3:  # Only break if we're past 30% of chunk_size
                     end = start + last_period + 1
+            
+            # If no good break point found, try to break at a word boundary
+            elif ' ' in chunk_candidate:
+                last_space = chunk_candidate.rfind(' ')
+                if last_space > chunk_size * 0.8:  # Only break if we're past 80% of chunk_size
+                    end = start + last_space
 
             # Extract chunk and clean it up
             chunk = text[start:end].strip()
             if chunk:
                 chunks.append(chunk)
 
-            # Move start position for next chunk
-            start = end
+            # Calculate next start position with overlap
+            # Make sure we don't go backwards
+            if len(chunks) > 1:  # Only apply overlap after the first chunk
+                next_start = max(start + 1, end - overlap)  # Ensure progress
+                # Try to find a good overlap point (sentence or paragraph boundary)
+                overlap_text = text[max(0, end - overlap):end]
+                
+                # Look for sentence boundaries in the overlap region
+                sentence_boundaries = []
+                for match in re.finditer(r'\. |\n\n', overlap_text):
+                    sentence_boundaries.append(match.start())
+                
+                if sentence_boundaries:
+                    # Use the last sentence boundary for a clean overlap
+                    overlap_start = max(0, end - overlap + sentence_boundaries[-1] + 2)
+                    next_start = max(next_start, overlap_start)
+                
+                start = next_start
+            else:
+                start = end
 
         return chunks
     

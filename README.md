@@ -16,9 +16,12 @@ This MCP server provides tools that enable AI agents to crawl websites, store co
 
 The server includes several advanced RAG strategies that can be enabled to enhance retrieval quality:
 - **Contextual Embeddings** for enriched semantic understanding
-- **Hybrid Search** combining vector and keyword search
+- **True Hybrid Search** combining vector and PostgreSQL full-text search with RRF (Reciprocal Rank Fusion)
+- **Query Enhancement** with query preprocessing, expansion, and multi-query generation
+- **Result Diversification** using Maximum Marginal Relevance (MMR) algorithm
 - **Agentic RAG** for specialized code example extraction
-- **Reranking** for improved result relevance using cross-encoder models
+- **Advanced Reranking** for improved result relevance using cross-encoder models
+- **Optimized Vector Storage** with enhanced indexing strategies
 
 See the [Configuration section](#configuration) below for details on how to enable and configure these strategies.
 
@@ -38,12 +41,20 @@ The Crawl4AI RAG MCP server is just the beginning. Here's where we're headed:
 
 ## Features
 
+### Core Crawling & Storage
 - **Smart URL Detection**: Automatically detects and handles different URL types (regular webpages, sitemaps, text files)
 - **Recursive Crawling**: Follows internal links to discover content
 - **Parallel Processing**: Efficiently crawls multiple pages simultaneously
-- **Content Chunking**: Intelligently splits content by headers and size for better processing
-- **Vector Search**: Performs RAG over crawled content, optionally filtering by data source for precision
+- **Enhanced Content Chunking**: Intelligently splits content with overlap preservation and boundary detection
 - **Source Retrieval**: Retrieve sources available for filtering to guide the RAG process
+
+### Advanced RAG Pipeline ✨ NEW
+- **True Hybrid Search**: Combines vector similarity with PostgreSQL full-text search using Reciprocal Rank Fusion (RRF)
+- **Query Enhancement**: Automatic query preprocessing, type detection, expansion, and multi-query generation
+- **Result Diversification**: Maximum Marginal Relevance (MMR) algorithm ensures diverse, non-redundant results
+- **Content-Type Aware**: Intelligently categorizes and balances different types of content (code, tutorials, API docs, etc.)
+- **Optimized Vector Storage**: Enhanced indexing with IVFFLAT/HNSW options for better performance
+- **Smart Query Processing**: Detects query types (factual, conceptual, code, how-to, troubleshooting) for optimized retrieval
 
 ## Tools
 
@@ -66,6 +77,7 @@ The server provides essential web crawling and search tools:
 - [Python 3.12+](https://www.python.org/downloads/) if running the MCP server directly through uv
 - [PostgreSQL](https://www.postgresql.org/) database with [pgvector extension](https://github.com/pgvector/pgvector) (local or remote)
 - [OpenAI API key](https://platform.openai.com/api-keys) (for generating embeddings)
+- [NumPy](https://numpy.org/) (automatically installed with the package for enhanced MMR calculations)
 
 ## Installation
 
@@ -135,6 +147,28 @@ Before running the server, you need to set up a PostgreSQL database with the pgv
    - Connect to your PostgreSQL database
    - Run the SQL commands from `crawled_pages.sql` to create the necessary tables and functions
 
+### Database Migration for Enhanced Features ✨ NEW
+
+If you're upgrading from a previous version, you'll need to add the new full-text search columns:
+
+```sql
+-- Add full-text search columns for enhanced hybrid search
+ALTER TABLE crawled_pages ADD COLUMN IF NOT EXISTS content_tokens tsvector GENERATED ALWAYS AS (to_tsvector('english', content)) STORED;
+ALTER TABLE code_examples ADD COLUMN IF NOT EXISTS content_tokens tsvector GENERATED ALWAYS AS (to_tsvector('english', content || ' ' || summary)) STORED;
+
+-- Create optimized indexes
+CREATE INDEX IF NOT EXISTS idx_crawled_pages_content_tokens ON crawled_pages USING gin (content_tokens) WITH (fastupdate = off);
+CREATE INDEX IF NOT EXISTS idx_code_examples_content_tokens ON code_examples USING gin (content_tokens) WITH (fastupdate = off);
+
+-- Update existing vector indexes for better performance
+DROP INDEX IF EXISTS crawled_pages_embedding_idx;
+CREATE INDEX crawled_pages_embedding_idx ON crawled_pages USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+-- Add new hybrid search functions (run the full updated schema file)
+```
+
+**⚠️ Important**: Always backup your database before running migrations!
+
 ## Configuration
 
 Create a `.env` file in the project root with the following variables:
@@ -180,6 +214,14 @@ USE_HYBRID_SEARCH=false
 USE_AGENTIC_RAG=false
 USE_RERANKING=false
 
+# Enhanced RAG Pipeline Features ✨ NEW
+USE_RESULT_DIVERSIFICATION=true  # Enable MMR algorithm for result diversification
+MMR_LAMBDA=0.7  # Balance between relevance (1.0) and diversity (0.0)
+MAX_RESULTS_PER_CONTENT_TYPE=3  # Max results per content type for diversity
+
+# Enhanced Chunking Configuration
+DEFAULT_OVERLAP=200  # Characters to overlap between chunks for context preservation
+
 # PostgreSQL Configuration
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
@@ -207,12 +249,13 @@ When enabled, this option adds `/no_think` to prompts sent to reasoning models (
 - **Trade-offs**: Faster responses and lower costs, but may reduce the quality of reasoning for complex tasks.
 - **Cost**: Lower API costs when using reasoning models as they skip the thinking step.
 
-#### 2. **USE_HYBRID_SEARCH**
-Combines traditional keyword search with semantic vector search to provide more comprehensive results. The system performs both searches in parallel and intelligently merges results, prioritizing documents that appear in both result sets.
+#### 2. **USE_HYBRID_SEARCH** ✨ ENHANCED
+Combines semantic vector search with PostgreSQL full-text search using Reciprocal Rank Fusion (RRF). The system performs both searches in parallel and uses advanced ranking fusion to merge results, ensuring the best of both semantic understanding and exact keyword matching.
 
 - **When to use**: Enable this when users might search using specific technical terms, function names, or when exact keyword matches are important alongside semantic understanding.
-- **Trade-offs**: Slightly slower search queries but more robust results, especially for technical content.
+- **Trade-offs**: Slightly slower search queries but significantly more robust and accurate results.
 - **Cost**: No additional API costs, just computational overhead.
+- **New Features**: RRF algorithm, optimized full-text indexing, and intelligent result fusion.
 
 #### 3. **USE_AGENTIC_RAG**
 Enables specialized code example extraction and storage. When crawling documentation, the system identifies code blocks (≥300 characters), extracts them with surrounding context, generates summaries, and stores them in a separate vector database table specifically designed for code search.
@@ -230,6 +273,50 @@ Applies cross-encoder reranking to search results after initial retrieval. Uses 
 - **Cost**: No additional API costs - uses a local model that runs on CPU.
 - **Benefits**: Better result relevance, especially for complex queries. Works with both regular RAG search and code example search.
 - **Custom Models**: You can use custom reranking models from Hugging Face Hub, local files, or custom endpoints.
+
+### Enhanced RAG Pipeline Features ✨ NEW
+
+The system now includes several advanced features that significantly improve retrieval accuracy and result quality:
+
+#### 5. **USE_RESULT_DIVERSIFICATION**
+Applies Maximum Marginal Relevance (MMR) algorithm to ensure diverse, non-redundant search results. The system balances relevance with diversity to prevent similar results from dominating the response.
+
+- **When to use**: Always recommended. Ensures comprehensive coverage of topics and reduces redundancy in search results.
+- **Configuration**: 
+  - `MMR_LAMBDA=0.7` - Balance between relevance (1.0) and diversity (0.0)
+  - `MAX_RESULTS_PER_CONTENT_TYPE=3` - Limits results per content type for variety
+- **Trade-offs**: Minimal performance impact with significant improvement in result quality.
+- **Benefits**: More comprehensive answers, better coverage of different aspects of a topic.
+
+#### 6. **Enhanced Query Processing** (Always Active)
+Automatically enhances queries through multiple strategies:
+
+- **Query Type Detection**: Identifies query intent (factual, conceptual, code, how-to, troubleshooting)
+- **Query Expansion**: Generates variations based on detected type
+- **Multi-Query Generation**: Creates alternative phrasings for comprehensive retrieval
+- **Technical Term Preservation**: Maintains proper capitalization for technical terms
+
+- **Benefits**: Better understanding of user intent, more comprehensive retrieval, improved accuracy.
+- **Trade-offs**: Slightly longer processing time for significantly better results.
+
+#### 7. **Enhanced Content Chunking** (Always Active)
+Improved chunking strategy with overlap preservation:
+
+- **Intelligent Overlap**: `DEFAULT_OVERLAP=200` characters preserved between chunks
+- **Boundary Detection**: Respects code blocks, paragraphs, and sentence boundaries
+- **Context Preservation**: Prevents information loss at chunk boundaries
+
+- **Benefits**: Better context preservation, improved retrieval accuracy, reduced information fragmentation.
+
+#### 8. **Optimized Vector Storage** (Always Active)
+Enhanced database indexing and query optimization:
+
+- **IVFFLAT Optimization**: Tuned list counts for better performance
+- **HNSW Support**: Alternative indexing for higher accuracy (commented in schema)
+- **Composite Indexes**: Source + embedding optimization for filtered searches
+- **Full-Text Optimization**: Improved GIN indexing configuration
+
+- **Benefits**: Faster search queries, better scalability, improved accuracy.
 
 ### Batch Processing Configuration
 
@@ -260,34 +347,42 @@ Enables batch processing for contextual embedding generation (when USE_CONTEXTUA
 
 ### Recommended Configurations
 
-**For general documentation RAG:**
+**For general documentation RAG (Enhanced):**
 ```
 USE_CONTEXTUAL_EMBEDDINGS=false
 USE_HYBRID_SEARCH=true
 USE_AGENTIC_RAG=false
 USE_RERANKING=true
+USE_RESULT_DIVERSIFICATION=true
+MMR_LAMBDA=0.7
+DEFAULT_OVERLAP=200
 ```
 
-**For AI coding assistant with code examples:**
+**For AI coding assistant with code examples (Enhanced):**
 ```
 USE_CONTEXTUAL_EMBEDDINGS=true
 USE_HYBRID_SEARCH=true
 USE_AGENTIC_RAG=true
 USE_RERANKING=true
+USE_RESULT_DIVERSIFICATION=true
+MMR_LAMBDA=0.6  # Slightly more diversity for code examples
+MAX_RESULTS_PER_CONTENT_TYPE=2
+DEFAULT_OVERLAP=300  # More overlap for code context
 ENABLE_BATCH_EMBEDDINGS=true
 ENABLE_BATCH_SUMMARIES=true
 ENABLE_BATCH_CONTEXTUAL_EMBEDDINGS=true
 ```
 
-**For fast, basic RAG:**
+**For fast, basic RAG (Enhanced):**
 ```
 USE_CONTEXTUAL_EMBEDDINGS=false
 USE_HYBRID_SEARCH=true
 USE_AGENTIC_RAG=false
 USE_RERANKING=false
+USE_RESULT_DIVERSIFICATION=true
+MMR_LAMBDA=0.8  # Favor relevance over diversity for speed
+DEFAULT_OVERLAP=150
 ENABLE_BATCH_EMBEDDINGS=true
-ENABLE_BATCH_SUMMARIES=false
-ENABLE_BATCH_CONTEXTUAL_EMBEDDINGS=false
 ```
 
 **For maximum processing speed (with higher API usage):**

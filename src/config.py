@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     default_num_results: int = 5
     default_semantic_threshold: float = 0.5
     default_rerank_threshold: float = 0.3
+    
+    # Diversification Configuration
+    use_result_diversification: bool = os.getenv("USE_RESULT_DIVERSIFICATION", "true") == "true"
+    mmr_lambda: float = float(os.getenv("MMR_LAMBDA", "0.7"))  # Balance between relevance and diversity
+    max_results_per_content_type: int = int(os.getenv("MAX_RESULTS_PER_CONTENT_TYPE", "3"))
 
     # Embedding Configuration
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")

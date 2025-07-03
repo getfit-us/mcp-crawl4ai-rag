@@ -79,6 +79,9 @@ class SearchResult(BaseModel):
     chunk_number: int
     similarity_score: float
     rerank_score: Optional[float] = None
+    text_rank: Optional[float] = None  # Full-text search rank
+    hybrid_score: Optional[float] = None  # Combined RRF score
+    mmr_rank: Optional[int] = None  # MMR diversification rank
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 

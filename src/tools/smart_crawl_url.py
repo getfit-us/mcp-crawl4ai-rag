@@ -255,10 +255,11 @@ async def smart_crawl_url(
                 # Extract source_id
                 source_id = urlparse(result_url).netloc
                 
-                # Chunk the content
+                # Chunk the content with overlap
                 chunks = text_processor.smart_chunk_markdown(
                     markdown_content, 
-                    chunk_size=actual_chunk_size
+                    chunk_size=actual_chunk_size,
+                    overlap=settings.default_overlap
                 )
                 
                 if not chunks:

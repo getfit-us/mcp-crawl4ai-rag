@@ -79,10 +79,11 @@ async def crawl_single_page(
             result_url = result['url']
             markdown_content = result['markdown']
             
-            # Chunk the content
+            # Chunk the content with overlap
             chunks = text_processor.smart_chunk_markdown(
                 markdown_content, 
-                chunk_size=settings.default_chunk_size
+                chunk_size=settings.default_chunk_size,
+                overlap=settings.default_overlap
             )
             
             if not chunks:
